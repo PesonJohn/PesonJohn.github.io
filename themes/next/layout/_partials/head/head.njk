@@ -1,0 +1,73 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="{{ theme.android_chrome_color }}">
+<meta name="generator" content="Hexo {{ hexo_version }}">
+
+<script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+<link href="//cdn.bootcss.com/pace/1.0.2/themes/pink/pace-theme-flash.css" rel="stylesheet">
+<style>
+    .pace .pace-progress {
+        background: #1E92FB; /*进度条颜色*/
+        height: 3px;
+    }
+    .pace .pace-progress-inner {
+         box-shadow: 0 0 10px #1E92FB, 0 0 5px     #1E92FB; /*阴影颜色*/
+    }
+    .pace .pace-activity {
+        border-top-color: #1E92FB;    /*上边框颜色*/
+        border-left-color: #1E92FB;    /*左边框颜色*/
+    }
+</style>
+
+
+{{ next_pre() }}
+
+{%- if theme.favicon.apple_touch_icon %}
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for(theme.favicon.apple_touch_icon) }}">
+{%- endif %}
+{%- if theme.favicon.medium %}
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for(theme.favicon.medium) }}">
+{%- endif %}
+{%- if theme.favicon.small %}
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for(theme.favicon.small) }}">
+{%- endif %}
+{%- if theme.favicon.safari_pinned_tab %}
+  <link rel="mask-icon" href="{{ url_for(theme.favicon.safari_pinned_tab) }}" color="{{ theme.android_chrome_color }}">
+{%- endif %}
+{%- if theme.favicon.android_manifest %}
+  <link rel="manifest" href="{{ url_for(theme.favicon.android_manifest) }}">
+{%- endif %}
+
+{%- if theme.google_site_verification %}
+  <meta name="google-site-verification" content="{{ theme.google_site_verification }}">
+{%- endif %}
+{%- if theme.bing_site_verification %}
+  <meta name="msvalidate.01" content="{{ theme.bing_site_verification }}">
+{%- endif %}
+{%- if theme.yandex_site_verification %}
+  <meta name="yandex-verification" content="{{ theme.yandex_site_verification }}">
+{%- endif %}
+{%- if theme.baidu_site_verification %}
+  <meta name="baidu-site-verification" content="{{ theme.baidu_site_verification }}">
+{%- endif %}
+
+<link rel="stylesheet" href="{{ url_for(theme.css) }}/main.css">
+
+{{ next_font() }}
+
+{{ next_vendors('fontawesome') }}
+
+{%- if theme.motion.enable %}
+  {{ next_vendors('animate_css') }}
+{%- endif %}
+
+{%- if theme.fancybox %}
+  {{ next_vendors('fancybox_css') }}
+{%- endif %}
+
+{%- if theme.nprogress.enable %}
+  {{ next_vendors('nprogress_css') }}
+  {{ next_vendors('nprogress_js') }}
+{%- endif %}
+
+{{ next_data('main', next_config()) }}
