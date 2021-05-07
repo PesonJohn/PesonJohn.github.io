@@ -12,7 +12,7 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure>
 
 <p>修改<code>站点配置文件</code></p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="keyword">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="keyword">true</span></span><br><span class="line">  postAsset: <span class="keyword">true</span></span><br></pre></td></tr></table></figure>
 
 <p>这样在创建文章时，会同样生成一个同名文件夹</p>
 <p><img src="/2021/05/07/TestPage/image-20210507150008908.png" alt="实例"></p>
