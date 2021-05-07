@@ -88,4 +88,41 @@
         <tag>hexo</tag>
       </tags>
   </entry>
+  <entry>
+    <title>创建分支存储源文件</title>
+    <url>/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/</url>
+    <content><![CDATA[<p>为了防止日后出现换电脑的情况而导致自己的配置文件和一些文档消失，所以创建一个分支存放源文件是有必要的，当然你也可以选择存放到云盘，只要你记得更新就是了。创建分支存放的方法其实也不是很复杂。</p>
+<span id="more"></span>
+
+<h2 id="初始化版本库并与远程仓库关联"><a href="#初始化版本库并与远程仓库关联" class="headerlink" title="初始化版本库并与远程仓库关联"></a>初始化版本库并与远程仓库关联</h2><p>一般按照网上方法所创建的博客是没有与远程仓库建立关联的，通过几个git命令来进行关联。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">//将你的本地文件夹初始化成一个版本库</span><br><span class="line">git init</span><br><span class="line"></span><br><span class="line">//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin</span><br><span class="line">git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="创建并切换分支，提交文件"><a href="#创建并切换分支，提交文件" class="headerlink" title="创建并切换分支，提交文件"></a>创建并切换分支，提交文件</h2><p>创建并切换分支：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">git checkout -b <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>提交文件：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">git add .</span><br><span class="line"></span><br><span class="line">git commit -m<span class="string">&quot;源文件&quot;</span></span><br><span class="line"></span><br><span class="line">git push origin <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="在GitHub中更改新分支为默认分支"><a href="#在GitHub中更改新分支为默认分支" class="headerlink" title="在GitHub中更改新分支为默认分支"></a>在GitHub中更改新分支为默认分支</h2><p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
+<p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
+<p><img src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
+<p>选中新创分支并点击Update</p>
+<p><img src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
+<p>它会弹出一个红色的经过，直接sure就行了。</p>
+<h2 id="后续日常管理操作"><a href="#后续日常管理操作" class="headerlink" title="后续日常管理操作"></a>后续日常管理操作</h2><p>只要你的<code>站点配置文件</code>里deploy的branch是master，在你执行<code>hexo g -d</code>后也同样会更新。在你进行了文章添加修改或修改样式等改动后，通过下面流程进行管理：</p>
+<ol>
+<li>依次执行<code>git add .</code> 、<code>git commit -m&quot;xxx&quot;</code>、<code>git push origin 新创分支名</code>推送到GitHub(注意此时当前分支是你新创的分支)。</li>
+<li>执行<code>hexo g -d</code>发布网站到master分支上</li>
+</ol>
+<p>建议不要调转这两者的顺序</p>
+<h2 id="在其他电脑修改博客"><a href="#在其他电脑修改博客" class="headerlink" title="在其他电脑修改博客"></a>在其他电脑修改博客</h2><p>通过git clone将仓库拉下来(默认分支为你当时新创的分支)</p>
+<p>然后在你copy下来的仓库文件夹通过git bash执行一下指令：<code>npm install hexo</code>、<code>npm install</code>、<code>npm install hexo-deployer-git</code>（不需要<code>hexo init</code>）。</p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
 </search>
