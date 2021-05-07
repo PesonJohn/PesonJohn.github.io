@@ -6,7 +6,7 @@
   <link href="https://pesonjohn.github.io/atom.xml" rel="self"/>
   
   <link href="https://pesonjohn.github.io/"/>
-  <updated>2021-05-07T15:51:00.215Z</updated>
+  <updated>2021-05-07T15:52:53.663Z</updated>
   <id>https://pesonjohn.github.io/</id>
   
   <author>
@@ -17,11 +17,11 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>在Hexo文章中添加图片</title>
+    <title>在文章中添加图片</title>
     <link href="https://pesonjohn.github.io/2021/05/07/TestPage/"/>
     <id>https://pesonjohn.github.io/2021/05/07/TestPage/</id>
     <published>2021-05-07T06:27:50.000Z</published>
-    <updated>2021-05-07T15:51:00.215Z</updated>
+    <updated>2021-05-07T15:52:53.663Z</updated>
     
     <content type="html"><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p><p>贴张图片测试一下能不能成功显示出来：👇</p><p><img src="/2021/05/07/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p><span id="more"></span><p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure><p>修改<code>站点配置文件</code></p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure><p>这样在创建文章时，会同样生成一个同名文件夹</p><p><img src="/2021/05/07/TestPage/image-20210507150008908.png" alt="实例"></p><p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p><p><img src="/2021/05/07/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p><p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p><p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>]]></content>
     

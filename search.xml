@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>在Hexo文章中添加图片</title>
+    <title>在文章中添加图片</title>
     <url>/2021/05/07/TestPage/</url>
     <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
 <p>贴张图片测试一下能不能成功显示出来：👇</p>
