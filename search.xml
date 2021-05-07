@@ -25,7 +25,8 @@
         <category>hexo配置</category>
       </categories>
       <tags>
-        <tag>-test -hexo</tag>
+        <tag>test</tag>
+        <tag>hexo</tag>
       </tags>
   </entry>
   <entry>
@@ -52,6 +53,8 @@
     <title>在文章中添加更新时间</title>
     <url>/2021/05/07/makeUpdTime/</url>
     <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。</p>
+<span id="more"></span>
+
 <p>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</p>
 <p><img src="/2021/05/07/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
 <p>代码如下：</p>
@@ -66,7 +69,7 @@
 
 
 <p>这样更新时间就能显示出来了。</p>
-<p><img src="/2021/05/07/makeUpdTime/image-20210508000734827.png" alt="image-20210508000734827"></p>
+<p><img src="/2021/05/07/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
 ]]></content>
       <categories>
         <category>hexo配置</category>
