@@ -12,7 +12,7 @@ comments: true
 
 
 
-鉴于网上的文章许多都是通过修改`/themes/next/layout/_macro/post.swig`，并在`<span class="post-time">...</span>`标签后添加一段代码，但是现在的版本找不到swig文件。
+鉴于网上的文章许多都是通过修改`/themes/next/layout/_macro/post.swig`，并在`<span class="post-time">...</span>`标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。
 
 <!--more-->
 
