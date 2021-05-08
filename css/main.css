@@ -2844,7 +2844,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #785487;
+  background: #ad2bb8;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
@@ -2976,4 +2976,8 @@ figure.highlight pre .coffeescript .title {
 figure.highlight pre .tag .attr,
 figure.highlight pre .javascript .function {
   color: $highlight-purple;
+}
+.article-entry pre,
+.article-entry .highlight {
+  margin-top: 30px;
 }
