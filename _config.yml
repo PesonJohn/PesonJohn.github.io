@@ -3,9 +3,9 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: John的小Blog
+title: IconSon-Blog
 subtitle: ''
-description: '一个初次尝试的个人博客，在学Java以及各种框架中'
+description: '平平无奇小Five'
 keywords: Johnson,johnson,庄
 author: Johnson
 language: zh-CN
@@ -49,10 +49,10 @@ future: true
 highlight:
   enable: true
   line_number: true
-  auto_detect: false
+  auto_detect: true
   tab_replace: ''
   wrap: true
-  hljs: true
+  hljs: false
 prismjs:
   enable: false
   preprocess: true

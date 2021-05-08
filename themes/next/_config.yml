@@ -28,7 +28,7 @@ custom_file_path:
   #bodyEnd: source/_data/body-end.njk
   #variable: source/_data/variables.styl
   #mixin: source/_data/mixins.styl
-  style: source/_data/styles.styl
+  #style: source/_data/styles.styl
 
 
 # ---------------------------------------------------------------
@@ -359,14 +359,16 @@ body_scrollbar:
   # Present the scrollbar even if the content is not overflowing.
   stable: false
 
-highlight_theme: night eighties
+
 
 codeblock:
   # Code Highlight theme
   # All available themes: https://theme-next.js.org/highlight/
+  # Available values: normal | night | night eighties | night blue | night bright | solarized | solarized dark | galactic
+  # See: https://github.com/chriskempson/tomorrow-theme
   theme:
-    light: default
-    dark: tomorrow-night
+    light: tomorrow-night-bright
+    dark: tomorrow-night-bright
   prism:
     light: prism
     dark: prism-dark
@@ -375,7 +377,7 @@ codeblock:
     enable: true
     show_result: true
     # Available values: default | flat | mac
-    style: 
+    style: mac
 
 
 
