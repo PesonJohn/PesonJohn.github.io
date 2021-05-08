@@ -9,13 +9,10 @@
 <span id="more"></span>
 
 <p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
-<pre><code class="highlight bash">npm install https://github.com/CodeFalling/hexo-asset-image --save</code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
 
 <p>修改<code>站点配置文件</code></p>
-<pre><code class="highlight bash">post_asset_folder: <span class="literal">true</span>
-marked:
-  prependRoot: <span class="literal">true</span>
-  postAsset: <span class="literal">true</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
 
 <p>这样在创建文章时，会同样生成一个同名文件夹</p>
 <p><img src="/TestPage/image-20210507150008908.png" alt="实例"></p>
@@ -38,16 +35,16 @@ marked:
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
 <span id="more"></span>
 
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><pre><code class="highlight bash">$ hexo new <span class="string">&quot;My New Post&quot;</span></code></pre>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
 
 <p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><pre><code class="highlight bash">$ hexo server</code></pre>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
 
 <p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><pre><code class="highlight bash">$ hexo generate</code></pre>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
 
 <p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><pre><code class="highlight bash">$ hexo deploy</code></pre>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
 
 <p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
 ]]></content>
@@ -61,21 +58,13 @@ marked:
 <h2 id="初始方法-不需要"><a href="#初始方法-不需要" class="headerlink" title="初始方法(不需要)"></a>初始方法(不需要)</h2><p><del>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</del></p>
 <p><img src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
 <p><del>代码如下：</del></p>
-<pre><code class="highlight html">&#123;%if post.updated and post.updated &gt; post.date%&#125;
-  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span>
-    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;
-    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span>
-      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;
-    <span class="tag">&lt;/<span class="name">time</span>&gt;</span>
-  <span class="tag">&lt;/<span class="name">span</span>&gt;</span>
-&#123;% endif %&#125;</code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="HTML"><figure class="iseeu highlight /html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
 
 <p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<pre><code class="highlight yml"><span class="attr">post:</span>
-  <span class="attr">updated:</span> <span class="string">更新于</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
 
 <p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
-<pre><code class="highlight yml"><span class="attr">display_updated:</span> <span class="literal">true</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
 
 
 
@@ -84,25 +73,14 @@ marked:
 <hr>
 <h2 id="现方法"><a href="#现方法" class="headerlink" title="现方法"></a>现方法</h2><p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
 <p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
-<pre><code class="highlight yml"><span class="comment">#可以加在最后一行</span>
-<span class="attr">display_updated:</span> <span class="literal">true</span>
-
-<span class="comment">#修改update_at</span>
-<span class="attr">post_meta:</span>
- <span class="attr">updated_at:</span>
-     <span class="attr">enable:</span> <span class="literal">true</span>
-     <span class="attr">another_day:</span> <span class="literal">true</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
 
 <p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<pre><code class="highlight yml"><span class="attr">post:</span>
-  <span class="attr">updated:</span> <span class="string">更新于</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
 
-<pre><code class="highlight yaml"><span class="attr">post:</span>
-  <span class="attr">updated:</span> <span class="string">更新于</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
 
-<pre><code class="highlight java"><span class="function"><span class="keyword">public</span> staic <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>&#123;
-    System.out.priltln(<span class="string">&quot;TEST&quot;</span>);
-&#125;</code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> staic <span class="keyword">void</span> <span class="title">main</span><span class="params">(String args[])</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> a;</span><br><span class="line">    System.out.priltln(<span class="string">&quot;TEST&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
 ]]></content>
       <categories>
@@ -119,21 +97,13 @@ marked:
 <span id="more"></span>
 
 <h2 id="初始化版本库并与远程仓库关联"><a href="#初始化版本库并与远程仓库关联" class="headerlink" title="初始化版本库并与远程仓库关联"></a>初始化版本库并与远程仓库关联</h2><p>一般按照网上方法所创建的博客是没有与远程仓库建立关联的，通过几个git命令来进行关联。</p>
-<pre><code class="highlight bash">//将你的本地文件夹初始化成一个版本库
-git init
-
-//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin
-git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">//将你的本地文件夹初始化成一个版本库</span><br><span class="line">git init</span><br><span class="line"></span><br><span class="line">//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin</span><br><span class="line">git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></span><br></pre></td></tr></table></figure></div>
 
 <h2 id="创建并切换分支，提交文件"><a href="#创建并切换分支，提交文件" class="headerlink" title="创建并切换分支，提交文件"></a>创建并切换分支，提交文件</h2><p>创建并切换分支：</p>
-<pre><code class="highlight bash">git checkout -b <span class="string">&quot;新分支名&quot;</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">git checkout -b <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
 
 <p>提交文件：</p>
-<pre><code class="highlight bash">git add .
-
-git commit -m<span class="string">&quot;源文件&quot;</span>
-
-git push origin <span class="string">&quot;新分支名&quot;</span></code></pre>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">git add .</span><br><span class="line"></span><br><span class="line">git commit -m<span class="string">&quot;源文件&quot;</span></span><br><span class="line"></span><br><span class="line">git push origin <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
 
 <h2 id="在GitHub中更改新分支为默认分支"><a href="#在GitHub中更改新分支为默认分支" class="headerlink" title="在GitHub中更改新分支为默认分支"></a>在GitHub中更改新分支为默认分支</h2><p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
 <p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
