@@ -28,7 +28,7 @@ custom_file_path:
   #bodyEnd: source/_data/body-end.njk
   #variable: source/_data/variables.styl
   #mixin: source/_data/mixins.styl
-  #style: source/_data/styles.styl
+  style: source/_data/styles.styl
 
 
 # ---------------------------------------------------------------
@@ -42,7 +42,7 @@ scheme: Mist
 #scheme: Gemini
 
 # Dark Mode
-darkmode: true
+darkmode: false
 
 
 # ---------------------------------------------------------------
@@ -359,7 +359,7 @@ body_scrollbar:
   # Present the scrollbar even if the content is not overflowing.
   stable: false
 
-
+highlight_theme: night eighties
 
 codeblock:
   # Code Highlight theme
@@ -377,7 +377,7 @@ codeblock:
     # Available values: default | flat | mac
     style: 
 
-highlight_theme: night bright
+
 
 back2top:
   enable: true
@@ -957,3 +957,5 @@ images: images
 canvas_nest: true
 pace: true
 pace_theme: pace-theme-minimal
+
+display_updated: true
