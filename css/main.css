@@ -2844,7 +2844,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #95ffff;
+  background: #adff32;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
@@ -2871,9 +2871,6 @@ hr {
   display: inline-block;
 }
 body {
-  cursor: url("/images/default.cur"), default;
-  cursor: url("/images/text.cur"), text;
-}
-a:hover {
+  cursor: url("/images/default.cur"), auto !important;
   cursor: url("/images/hand.cur"), pointer;
 }
