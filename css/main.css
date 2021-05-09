@@ -2720,15 +2720,6 @@ hr {
     justify-content: center;
   }
 }
-.posts-expand.index .footer-inner {
-  text-align: center;
-}
-@media (max-width: 767px) {
-  .posts-expand.index .footer-inner {
-    text-align: center;
-    width: auto;
-  }
-}
 .posts-expand .post-eof {
   display: none;
 }
@@ -2774,6 +2765,15 @@ hr {
 }
 .post-button .btn:hover {
   border-bottom-color: var(--btn-default-hover-border-color);
+}
+.footer-inner {
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .footer-inner {
+    text-align: center;
+    width: auto;
+  }
 }
 .main-inner {
   margin: 0 auto;
@@ -2853,7 +2853,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #b1ff62;
+  background: #ff5d83;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
