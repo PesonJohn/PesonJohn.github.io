@@ -2720,11 +2720,11 @@ hr {
     justify-content: center;
   }
 }
-.posts-expand .post-eof {
+.posts-expand .post-eof .footer-inner {
   text-align: center;
 }
 @media (max-width: 767px) {
-  .posts-expand .post-eof {
+  .posts-expand .post-eof .footer-inner {
     text-align: center;
     width: auto;
   }
@@ -2841,7 +2841,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #ff05ee;
+  background: #59ff82;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
