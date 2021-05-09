@@ -2723,15 +2723,6 @@ hr {
 .posts-expand .post-eof {
   display: none;
 }
-.posts-expand .post-eof .footer-inner {
-  text-align: center;
-}
-@media (max-width: 767px) {
-  .posts-expand .post-eof .footer-inner {
-    text-align: center;
-    width: auto;
-  }
-}
 .posts-expand .post-block:not(:first-child) {
   margin-top: 120px;
 }
@@ -2853,7 +2844,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #ff5d83;
+  background: #93c4e7;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
