@@ -2721,7 +2721,6 @@ hr {
   }
 }
 .posts-expand .post-eof {
-  display: none;
   text-align: center;
 }
 @media (max-width: 767px) {
@@ -2842,7 +2841,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #ffb66c;
+  background: #ff05ee;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
