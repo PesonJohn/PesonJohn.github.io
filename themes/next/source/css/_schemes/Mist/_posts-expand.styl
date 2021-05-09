@@ -3,7 +3,7 @@
 .posts-expand {
   &.index {
     .post-header {
-      text-align: left;
+      text-align: center;
 
       +mobile() {
         text-align: center;
@@ -21,6 +21,7 @@
         justify-content: center;
       }
     }
+	
   }
 
   .post-eof {
@@ -36,7 +37,7 @@
   }
 
   .post-tags {
-    text-align: left;
+    text-align: center;
 
     a {
       background: var(--content-bg-color);
@@ -56,7 +57,7 @@
 
 .post-button {
   margin-top: 20px;
-  text-align: left;
+  text-align: center;
 
   .btn {
     background: none;
@@ -70,3 +71,12 @@
     }
   }
 }
+
+.footer-inner {
+	  text-align: center;
+
+      +mobile() {
+        text-align: center;
+		width: auto;
+      }
+	}
