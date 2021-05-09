@@ -1,0 +1,80 @@
+// background
+
+body {
+  background-image:url(/images/background.gif);
+  height:100%;
+  width:100%;
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+  background-size:cover;
+}
+
+// page-opacity
+
+.content-wrap {
+  opacity: 0.85;
+}
+
+.sidebar {
+  opacity: 0.85;
+}
+
+.header-inner {
+  background: rgba(255,255,255,0.85);
+}
+
+.popup {
+  opacity: 0.9;
+}
+
+// 主页文章添加阴影效果
+.post,.post-block{
+    background: white;
+	opacity: 0.75
+	margin-top: 60px;
+    margin-bottom: 20px;
+    padding: 25px;
+    -webkit-box-shadow: 0 0 5px rgba(202, 203, 203, .5);
+    -moz-box-shadow: 0 0 5px rgba(202, 203, 204, .5);
+    }
+// 文章内链接文本样式 
+.post-body p a{ 
+    color: #0593d3; 
+    border-bottom: none; 
+    border-bottom: 1px solid #0593d3; 
+    &:hover { 
+        color: #fc6423; 
+        border-bottom: none; 
+        border-bottom: 1px solid #fc6423; 
+    } 
+}
+
+// 修改选中字符的颜色
+/* webkit, opera, IE9 */
+::selection { 
+    background: #00c4b6;
+    color: #f7f7f7; 
+}
+/* firefox */
+::-moz-selection { 
+    background: #00c4b6;
+    color: #f7f7f7;    
+}
+
+.sidebar a {
+    border-bottom-color: $black-light;
+    color: 	#FFB6C1;
+
+    &:hover {
+      border-bottom-color: $orange;
+      color: $orange;
+    }
+}
+
+.main-inner .post-block{
+   margin-top:20px;
+}
+
+.posts-expand .post-block:not(:first-child) {
+    margin-top: 20px;
+}

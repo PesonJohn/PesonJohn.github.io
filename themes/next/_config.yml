@@ -28,7 +28,7 @@ custom_file_path:
   #bodyEnd: source/_data/body-end.njk
   #variable: source/_data/variables.styl
   #mixin: source/_data/mixins.styl
-  #style: source/_data/styles.styl
+  style: source/_data/styles.styl
 
 
 # ---------------------------------------------------------------
@@ -959,5 +959,13 @@ images: images
 canvas_nest: true
 pace: true
 pace_theme: pace-theme-minimal
+
+sakura:
+ enable: true
+
+cursor_effect:
+  enabled: true
+  #type: text  # fireworks：礼花 | explosion：爆炸 | love：浮出爱心 | text：浮出文字
+
 
 display_updated: true
