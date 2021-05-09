@@ -2720,6 +2720,18 @@ hr {
     justify-content: center;
   }
 }
+.posts-expand.index .footer-inner {
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .posts-expand.index .footer-inner {
+    text-align: center;
+    width: auto;
+  }
+}
+.posts-expand .post-eof {
+  display: none;
+}
 .posts-expand .post-eof .footer-inner {
   text-align: center;
 }
@@ -2841,7 +2853,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #59ff82;
+  background: #b1ff62;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
