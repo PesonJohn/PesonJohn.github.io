@@ -16,25 +16,31 @@ body {
 }
 
 .sidebar {
+  background: #303647;
   opacity: 0.85;
 }
 
+.header{
+ background-color: rgba(255,255,255,0);
+}
+
 .header-inner {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0);
 }
 
 .popup {
   opacity: 0.9;
 }
 
+
+
 // 主页文章添加阴影效果
-.post,.post-block{
-    background: white;
-	opacity: 0.75
+.post-block{
+    background-color: rgba(255,250,240,0.85);
 	margin-top: 60px;
     margin-bottom: 20px;
     padding: 25px;
-    -webkit-box-shadow: 0 0 5px rgba(202, 203, 203, .5);
+    -webkit-box-shadow: 0 0 10px rgb(219,215,210);
     -moz-box-shadow: 0 0 5px rgba(202, 203, 204, .5);
     }
 // 文章内链接文本样式 
@@ -72,9 +78,42 @@ body {
 }
 
 .main-inner .post-block{
+   background-color: rgba(255,250,240,0.85);
    margin-top:20px;
 }
 
 .posts-expand .post-block:not(:first-child) {
     margin-top: 20px;
+}
+
+.brand{
+ color: #5278be;
+ &:hover {
+      border-bottom-color: $orange;
+      color: #7c9aee;
+    }
+ 
+}
+
+.logo-line{
+ background: #5278be;
+}
+
+.menu .menu-item a{
+ color: #7c9aee;
+}
+
+.menu-item a:hover, .menu-item a.menu-item-active{
+ background: #313d60;
+}
+
+.comments{
+ background-color: rgba(255,250,240,0.85);
+ padding: 20px;
+ -webkit-box-shadow: 0 0 10px rgb(219,215,210);
+}
+
+.footer{
+ background-color: rgba(255,250,240,0);
+ color: #7c9aee;
 }

@@ -483,7 +483,7 @@ exturl_icon: true
 
 # Google Webmaster tools verification.
 # See: https://developers.google.com/search
-google_site_verification:
+google_site_verification: hYYSGC9sGEQIoR4T5O8LW0fwrC6G8Zb4ufSETCWpxI8
 
 # Bing Webmaster tools verification.
 # See: https://www.bing.com/webmasters
@@ -957,6 +957,7 @@ js: js
 images: images
 
 canvas_nest: true
+
 pace: true
 pace_theme: pace-theme-minimal
 
