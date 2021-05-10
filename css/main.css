@@ -2844,7 +2844,7 @@ hr {
   vertical-align: middle;
 }
 .links-of-author a::before {
-  background: #5ba17e;
+  background: #11fffc;
   display: inline-block;
   margin-right: 3px;
   transform: translateY(-2px);
@@ -2882,22 +2882,24 @@ body {
   opacity: 0.85;
 }
 .sidebar {
+  background: #303647;
   opacity: 0.85;
 }
+.header {
+  background-color: rgba(255,255,255,0);
+}
 .header-inner {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0);
 }
 .popup {
   opacity: 0.9;
 }
-.post,
 .post-block {
-  background: #fff;
-  opacity: 0.75;
+  background-color: rgba(255,250,240,0.85);
   margin-top: 60px;
   margin-bottom: 20px;
   padding: 25px;
-  -webkit-box-shadow: 0 0 5px rgba(202,203,203,0.5);
+  -webkit-box-shadow: 0 0 10px #dbd7d2;
   -moz-box-shadow: 0 0 5px rgba(202,203,204,0.5);
 }
 .post-body p a {
@@ -2929,8 +2931,35 @@ body {
   color: #fc6423;
 }
 .main-inner .post-block {
+  background-color: rgba(255,250,240,0.85);
   margin-top: 20px;
 }
 .posts-expand .post-block:not(:first-child) {
   margin-top: 20px;
+}
+.brand {
+  color: #5278be;
+}
+.brand:hover {
+  border-bottom-color: #fc6423;
+  color: #7c9aee;
+}
+.logo-line {
+  background: #5278be;
+}
+.menu .menu-item a {
+  color: #7c9aee;
+}
+.menu-item a:hover,
+.menu-item a.menu-item-active {
+  background: #313d60;
+}
+.comments {
+  background-color: rgba(255,250,240,0.85);
+  padding: 20px;
+  -webkit-box-shadow: 0 0 10px #dbd7d2;
+}
+.footer {
+  background-color: rgba(255,250,240,0);
+  color: #7c9aee;
 }
