@@ -487,7 +487,7 @@ google_site_verification: hYYSGC9sGEQIoR4T5O8LW0fwrC6G8Zb4ufSETCWpxI8
 
 # Bing Webmaster tools verification.
 # See: https://www.bing.com/webmasters
-bing_site_verification:
+bing_site_verification: f2a6bd0a21c799ca274c82ac47855616
 
 # Yandex Webmaster tools verification.
 # See: https://webmaster.yandex.ru
@@ -540,7 +540,10 @@ mediumzoom: false
 
 # Vanilla JavaScript plugin for lazyloading images.
 # For more information: https://apoorv.pro/lozad.js/demo/
-lazyload: false
+lazyload:
+ enable: true
+ onlypost: false
+ loadingImg: /images/loading.gif 
 
 # Pangu Support
 # For more information: https://github.com/vinta/pangu.js
