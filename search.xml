@@ -4,14 +4,14 @@
     <title>代码块Mac风格</title>
     <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
     <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
-<p><img src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508161438627.png" alt="image-20210508161438627"></p>
+<p><img data-src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508161438627.png" alt="image-20210508161438627"></p>
 <span id="more"></span>
 
 <p>通过 <a href="https://miaosakurai.com/">樱井喵</a> 的这一篇 <a href="https://miaosakurai.com/2020/04/20/Hexo-NexT%E7%BE%8E%E5%8C%96%F0%9F%8D%95Mac-Panel%E9%A3%8E%E6%A0%BC%E4%BB%A3%E7%A0%81%E5%9D%97%E9%85%8D%E7%BD%AE/">博客</a> ，直接在 <code>主题配置文件</code>配置一下 <code>codeblock.copy_button.style: mac</code>就行了</p>
 <div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">copy_button:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">show_result:</span> <span class="literal">true</span></span><br><span class="line">    <span class="comment"># Available values: default | flat | mac</span></span><br><span class="line">    <span class="attr">style:</span> <span class="string">mac</span></span><br></pre></td></tr></table></figure></div>
 
 <p>要实现上面代码块的样式，我们可以在<code>站点目录\node_modules\highlight.js\styles</code>里发现有许多中css样式(tomorrow-theme也在其中)</p>
-<p><img src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508160824026.png" alt="image-20210508160824026"></p>
+<p><img data-src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508160824026.png" alt="image-20210508160824026"></p>
 <p>我们找到<code>主题配置文件</code>中的theme，把light和dark都改成上述文件夹里的某种样式就行了，我用的是tomorrow-night-bright，也就是本文代码块的样式。</p>
 <div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">theme:</span></span><br><span class="line">    <span class="attr">light:</span> <span class="string">tomorrow-night-bright</span></span><br><span class="line">    <span class="attr">dark:</span> <span class="string">tomorrow-night-bright</span></span><br></pre></td></tr></table></figure></div>
 
@@ -43,9 +43,9 @@
 
 <h2 id="在GitHub中更改新分支为默认分支"><a href="#在GitHub中更改新分支为默认分支" class="headerlink" title="在GitHub中更改新分支为默认分支"></a>在GitHub中更改新分支为默认分支</h2><p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
 <p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
-<p><img src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
+<p><img data-src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
 <p>选中新创分支并点击Update</p>
-<p><img src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
+<p><img data-src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
 <p>它会弹出一个红色的经过，直接sure就行了。</p>
 <h2 id="后续日常管理操作"><a href="#后续日常管理操作" class="headerlink" title="后续日常管理操作"></a>后续日常管理操作</h2><p>只要你的<code>站点配置文件</code>里deploy的branch是master，在你执行<code>hexo g -d</code>后也同样会更新。在你进行了文章添加修改或修改样式等改动后，通过下面流程进行管理：</p>
 <ol>
@@ -70,7 +70,7 @@
 <span id="more"></span>
 
 <h2 id="初始方法-不需要"><a href="#初始方法-不需要" class="headerlink" title="初始方法(不需要)"></a>初始方法(不需要)</h2><p><del>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</del></p>
-<p><img src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
+<p><img data-src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
 <p><del>代码如下：</del></p>
 <div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="HTML"><figure class="iseeu highlight /html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
 
@@ -83,7 +83,7 @@
 
 
 <p>这样更新时间就能显示出来了。</p>
-<p><img src="/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
+<p><img data-src="/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
 <hr>
 <h2 id="现方法"><a href="#现方法" class="headerlink" title="现方法"></a>现方法</h2><p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
 <p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
@@ -105,7 +105,7 @@
     <url>/TestPage/</url>
     <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
 <p>贴张图片测试一下能不能成功显示出来：👇</p>
-<p><img src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
+<p><img data-src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
 <span id="more"></span>
 
 <p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
@@ -115,9 +115,9 @@
 <div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
 
 <p>这样在创建文章时，会同样生成一个同名文件夹</p>
-<p><img src="/TestPage/image-20210507150008908.png" alt="实例"></p>
+<p><img data-src="/TestPage/image-20210507150008908.png" alt="实例"></p>
 <p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
-<p><img src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
+<p><img data-src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
 <p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p>
 <p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
 ]]></content>
