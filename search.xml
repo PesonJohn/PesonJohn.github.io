@@ -1,92 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Hello World</title>
-    <url>/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<span id="more"></span>
-
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
-]]></content>
-  </entry>
-  <entry>
-    <title>在文章中添加图片</title>
-    <url>/TestPage/</url>
-    <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
-<p>贴张图片测试一下能不能成功显示出来：👇</p>
-<p><img src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
-<span id="more"></span>
-
-<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
-
-<p>修改<code>站点配置文件</code></p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-<p>这样在创建文章时，会同样生成一个同名文件夹</p>
-<p><img src="/TestPage/image-20210507150008908.png" alt="实例"></p>
-<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
-<p><img src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
-<p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p>
-<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>test</tag>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在文章中添加更新时间</title>
-    <url>/makeUpdTime/</url>
-    <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。</p>
-<span id="more"></span>
-
-<h2 id="初始方法-不需要"><a href="#初始方法-不需要" class="headerlink" title="初始方法(不需要)"></a>初始方法(不需要)</h2><p><del>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</del></p>
-<p><img src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
-<p><del>代码如下：</del></p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="HTML"><figure class="iseeu highlight /html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
-
-<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
-
-<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-
-
-<p>这样更新时间就能显示出来了。</p>
-<p><img src="/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
-<hr>
-<h2 id="现方法"><a href="#现方法" class="headerlink" title="现方法"></a>现方法</h2><p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
-<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
-
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>代码块Mac风格</title>
     <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
     <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
@@ -148,5 +62,91 @@
       <tags>
         <tag>hexo</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>在文章中添加更新时间</title>
+    <url>/makeUpdTime/</url>
+    <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。</p>
+<span id="more"></span>
+
+<h2 id="初始方法-不需要"><a href="#初始方法-不需要" class="headerlink" title="初始方法(不需要)"></a>初始方法(不需要)</h2><p><del>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</del></p>
+<p><img src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
+<p><del>代码如下：</del></p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="HTML"><figure class="iseeu highlight /html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
+
+<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+
+
+
+<p>这样更新时间就能显示出来了。</p>
+<p><img src="/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
+<hr>
+<h2 id="现方法"><a href="#现方法" class="headerlink" title="现方法"></a>现方法</h2><p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
+<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+
+<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
+
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在文章中添加图片</title>
+    <url>/TestPage/</url>
+    <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
+<p>贴张图片测试一下能不能成功显示出来：👇</p>
+<p><img src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
+<span id="more"></span>
+
+<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
+
+<p>修改<code>站点配置文件</code></p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+
+<p>这样在创建文章时，会同样生成一个同名文件夹</p>
+<p><img src="/TestPage/image-20210507150008908.png" alt="实例"></p>
+<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
+<p><img src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
+<p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p>
+<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>test</tag>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<span id="more"></span>
+
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
   </entry>
 </search>
