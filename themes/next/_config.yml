@@ -428,10 +428,10 @@ github_banner:
 # ---------------------------------------------------------------
 
 font:
-  enable: false
+  enable: true
 
   # Uri of fonts host, e.g. https://fonts.googleapis.com (Default).
-  host:
+  host: //fonts.loli.net
 
   # Font options:
   # `external: true` will load this font family from `host` above.
@@ -514,14 +514,18 @@ math:
   # That is it only render those page which has `mathjax: true` in front-matter.
   # If you set it to true, it will load mathjax / katex srcipt EVERY PAGE.
   every_page: false
+  enable: true
+  
+  engine: mathjax
 
   mathjax:
-    enable: false
+    enable: true
+    per_page: true
     # Available values: none | ams | all
     tags: none
 
   katex:
-    enable: false
+    enable: true
     # See: https://github.com/KaTeX/KaTeX/tree/master/contrib/copy-tex
     copy_tex: false
 
@@ -973,3 +977,4 @@ cursor_effect:
 
 
 display_updated: true
+
