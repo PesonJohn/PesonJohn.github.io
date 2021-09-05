@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://iconson.top/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/</loc>
+    
+    <lastmod>2021-09-05</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://iconson.top/TestPage/</loc>
     
     <lastmod>2021-05-12</lastmod>
@@ -60,29 +67,43 @@
 
   <url>
     <loc>https://iconson.top/</loc>
-    <lastmod>2021-05-13</lastmod>
+    <lastmod>2021-09-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   
   <url>
-    <loc>https://iconson.top/tags/hexo/</loc>
-    <lastmod>2021-05-13</lastmod>
+    <loc>https://iconson.top/tags/JAVA/</loc>
+    <lastmod>2021-09-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://iconson.top/tags/%E7%AE%97%E6%B3%95/</loc>
+    <lastmod>2021-09-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://iconson.top/tags/test/</loc>
-    <lastmod>2021-05-13</lastmod>
+    <lastmod>2021-09-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://iconson.top/tags/hexo/</loc>
+    <lastmod>2021-09-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://iconson.top/tags/%E4%BB%A3%E7%A0%81%E5%9D%97/</loc>
-    <lastmod>2021-05-13</lastmod>
+    <lastmod>2021-09-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -90,8 +111,15 @@
 
   
   <url>
+    <loc>https://iconson.top/categories/JAVA/</loc>
+    <lastmod>2021-09-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://iconson.top/categories/hexo%E9%85%8D%E7%BD%AE/</loc>
-    <lastmod>2021-05-13</lastmod>
+    <lastmod>2021-09-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>

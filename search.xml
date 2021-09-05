@@ -1,6 +1,153 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>JAVA均匀生成随机数</title>
+    <url>/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/</url>
+    <content><![CDATA[<h2 id="公式推导"><a href="#公式推导" class="headerlink" title="公式推导"></a>公式推导</h2><p>假如有一个函数rand2()会均匀生成[1,2]的随机数，现在想要实现一个rand4()的函数，第一次接触该类问题时，第一反应是如下所示：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="TAP"><figure class="iseeu highlight /tap"><table><tr><td class="code"><pre><span class="line">rand2() + rand2() = ? ==&gt; [2,4]</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 2 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 2 </span>    = 4</span><br><span class="line"></span><br><span class="line">// 为了把生成随机数的范围规约成[1,n]，于是在上一步的结果后减1</span><br><span class="line">(rand2()-1) + rand2() = ? ==&gt; [1,3]</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 2 </span>    = 3</span><br></pre></td></tr></table></figure></div>
+
+<span id="more"></span>
+
+<p>会发现生成的数字不是等概率的，造成这种情况的原因也很明显，有些数字是可以通过几个组合得来，有的只能通过一种组合得来</p>
+<p>若我们把(rand2()-1)乘以2，则会得到</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="TAP"><figure class="iseeu highlight /tap"><table><tr><td class="code"><pre><span class="line">(rand2()-1) ×<span class="number"> 2 </span>+ rand2() = ?</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 2 </span>    = 4</span><br></pre></td></tr></table></figure></div>
+
+<p>得到的结果恰好是等概率的。我们可以通过这种方法实现rand2()-&gt;rand4()</p>
+<p>我们再举个例子：有两个均匀随机函数rand9()和rand7()，a=(rand9-1)*7，b = rand7，result = a+b</p>
+<p>则能得到下列表格的结果：</p>
+<table>
+<thead>
+<tr>
+<th>a\b</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+</tr>
+<tr>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+<td>11</td>
+<td>12</td>
+<td>13</td>
+<td>14</td>
+</tr>
+<tr>
+<td>14</td>
+<td>15</td>
+<td>16</td>
+<td>17</td>
+<td>18</td>
+<td>19</td>
+<td>20</td>
+<td>21</td>
+</tr>
+<tr>
+<td>21</td>
+<td>22</td>
+<td>23</td>
+<td>24</td>
+<td>25</td>
+<td>26</td>
+<td>27</td>
+<td>28</td>
+</tr>
+<tr>
+<td>28</td>
+<td>29</td>
+<td>30</td>
+<td>31</td>
+<td>32</td>
+<td>33</td>
+<td>34</td>
+<td>35</td>
+</tr>
+<tr>
+<td>35</td>
+<td>36</td>
+<td>37</td>
+<td>38</td>
+<td>39</td>
+<td>40</td>
+<td>41</td>
+<td>42</td>
+</tr>
+<tr>
+<td>42</td>
+<td>43</td>
+<td>44</td>
+<td>45</td>
+<td>46</td>
+<td>47</td>
+<td>48</td>
+<td>49</td>
+</tr>
+<tr>
+<td>49</td>
+<td>50</td>
+<td>51</td>
+<td>52</td>
+<td>53</td>
+<td>54</td>
+<td>55</td>
+<td>56</td>
+</tr>
+<tr>
+<td>56</td>
+<td>57</td>
+<td>58</td>
+<td>59</td>
+<td>60</td>
+<td>61</td>
+<td>62</td>
+<td>63</td>
+</tr>
+</tbody></table>
+<p>可以看到这样也可以均匀随机的生成[1,63]的随机数，则可以得到这样的一个规律：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="REASONML"><figure class="iseeu highlight /reasonml"><table><tr><td class="code"><pre><span class="line">已知 rand<span class="constructor">_N()</span> 可以等概率的生成<span class="literal">[<span class="number">1</span>, N]</span>范围的随机数</span><br><span class="line">那么：</span><br><span class="line">(rand<span class="constructor">_X()</span> - <span class="number">1</span>) × Y + rand<span class="constructor">_Y()</span> ==&gt; 可以等概率的生成<span class="literal">[<span class="number">1</span>, X <span class="operator">*</span> Y]</span>范围的随机数</span><br><span class="line">即实现了 rand_X*<span class="constructor">Y()</span></span><br></pre></td></tr></table></figure></div>
+
+<p>公式：<br>$$<br>(rand_X() - 1) × Y + rand_Y() \Rightarrow 可以等概率的生成[1, X * Y]范围的随机数<br>$$</p>
+<h2 id="LC题目-优化"><a href="#LC题目-优化" class="headerlink" title="LC题目+优化"></a>LC题目+优化</h2><h3 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h3><p>再来看看Leetcode上的这一题：<a href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/">470. 用 Rand7() 实现 Rand10()</a></p>
+<p>要实现rand10()，就需要先实现<code>rand_N()</code>，并且保证N大于10且是10的倍数。这样再通过<code>rand_N() % 10 + 1</code> 就可以得到[1,10]范围的随机数了。</p>
+<p>rand_N()的实现方法可以通过上面推导出来的规律得到：</p>
+<p><code>(rand7()-1) × 7 + rand7()  ==&gt; rand49()</code></p>
+<p>但是这样实现的N不是10的倍数，这该怎么处理？这里就涉及到了“<strong>拒绝采样</strong>”的知识了，也就是说，如果某个采样结果不在要求的范围内，则丢弃它。基于上面的这些分析，再回头看下面的代码，想必是不难理解了。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> num = (rand7() - <span class="number">1</span>) * <span class="number">7</span> + rand7(); <span class="comment">// 等概率生成[1,49]范围的随机数</span></span><br><span class="line">            <span class="keyword">if</span>(num &lt;= <span class="number">40</span>) <span class="keyword">return</span> num % <span class="number">10</span> + <span class="number">1</span>; <span class="comment">// 拒绝采样，并返回[1,10]范围的随机数</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h3><p>根据上面的分析，我们已经知道<code>(rand7() - 1) * 7 + rand7()</code> 等概率生成<code>[1,49]</code>范围的随机数。而由于我们需要的是10的倍数，因此，需要舍弃掉<code>[41, 49]</code>这9个数。优化的点就始于——我们能否利用这些范围外的数字，以减少丢弃的值，提高命中率总而提高随机数生成效率。</p>
+<p>当生成的随机数x在<code>[41,49]</code>时，我们拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,9]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,63]</code>的随机数，若这次生成的随机数在<code>[61,63]</code>时，我们也拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,3]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,21]</code>的随机数，若这次生成的随机数为21，则我们拒绝采样21，但是舍弃的21只能得到1这一个随机数，没有用处，所以我们只能重新生成<code>[1,49]</code>的随机数。代码如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            <span class="keyword">int</span> a = (rand7()-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            <span class="keyword">int</span> b = rand7();</span><br><span class="line">            <span class="keyword">int</span> num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">40</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">40</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">60</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">60</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">20</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>执行效率也比上面快了许多</p>
+<p><img data-src="/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/image-20210905123421344.png" alt="image-20210905123421344"></p>
+<p>保留的数字范围可以通过下面这个公式得到：</p>
+<p>假设有<code>rand_X</code>，想得到<code>rand_Y</code>，<br><code>a = (rand_X()-1)*Y</code>，<code>b = rand_X()</code>;<br>则保留范围为：<br>$$<br>[1,Y*((a+b)_{max}/Y)]<br>$$<br>返回的数字为：<br>$$<br>(a+b)\pmod Y + 1<br>$$<br>参考题解链接：<a href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/solution/cong-zui-ji-chu-de-jiang-qi-ru-he-zuo-dao-jun-yun-/">从最基础的讲起如何做到均匀的生成随机数</a></p>
+]]></content>
+      <categories>
+        <category>JAVA</category>
+      </categories>
+      <tags>
+        <tag>JAVA</tag>
+        <tag>算法</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>代码块Mac风格</title>
     <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
     <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
@@ -125,8 +272,8 @@
         <category>hexo配置</category>
       </categories>
       <tags>
-        <tag>hexo</tag>
         <tag>test</tag>
+        <tag>hexo</tag>
       </tags>
   </entry>
   <entry>
