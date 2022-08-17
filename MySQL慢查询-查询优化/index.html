@@ -39,33 +39,31 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{&quot;hostname&quot;:&quot;iconson.top&quot;,&quot;root&quot;:&quot;&#x2F;&quot;,&quot;images&quot;:&quot;&#x2F;images&quot;,&quot;scheme&quot;:&quot;Mist&quot;,&quot;version&quot;:&quot;8.4.0&quot;,&quot;exturl&quot;:false,&quot;sidebar&quot;:{&quot;position&quot;:&quot;left&quot;,&quot;display&quot;:&quot;post&quot;,&quot;padding&quot;:18,&quot;offset&quot;:12},&quot;copycode&quot;:true,&quot;bookmark&quot;:{&quot;enable&quot;:false,&quot;color&quot;:&quot;#222&quot;,&quot;save&quot;:&quot;auto&quot;},&quot;fancybox&quot;:false,&quot;mediumzoom&quot;:false,&quot;lazyload&quot;:{&quot;enable&quot;:true,&quot;onlypost&quot;:false,&quot;loadingImg&quot;:&quot;&#x2F;images&#x2F;loading.gif&quot;},&quot;pangu&quot;:false,&quot;comments&quot;:{&quot;style&quot;:&quot;tabs&quot;,&quot;active&quot;:null,&quot;storage&quot;:true,&quot;lazyload&quot;:false,&quot;nav&quot;:null},&quot;motion&quot;:{&quot;enable&quot;:true,&quot;async&quot;:false,&quot;transition&quot;:{&quot;post_block&quot;:&quot;fadeIn&quot;,&quot;post_header&quot;:&quot;fadeInDown&quot;,&quot;post_body&quot;:&quot;fadeInDown&quot;,&quot;coll_header&quot;:&quot;fadeInLeft&quot;,&quot;sidebar&quot;:&quot;fadeInUp&quot;}},&quot;prism&quot;:false,&quot;i18n&quot;:{&quot;placeholder&quot;:&quot;搜索...&quot;,&quot;empty&quot;:&quot;没有找到任何搜索结果：${query}&quot;,&quot;hits_time&quot;:&quot;找到 ${hits} 个搜索结果（用时 ${time} 毫秒）&quot;,&quot;hits&quot;:&quot;找到 ${hits} 个搜索结果&quot;},&quot;path&quot;:&quot;&#x2F;search.xml&quot;,&quot;localsearch&quot;:{&quot;enable&quot;:true,&quot;trigger&quot;:&quot;auto&quot;,&quot;top_n_per_article&quot;:1,&quot;unescape&quot;:false,&quot;preload&quot;:false}}</script>
-<meta name="description" content="这是通过 hexo new TestPage 命令所创建的一篇文章，存放在source目录下的_posts. 贴张图片测试一下能不能成功显示出来：👇">
+<meta name="description" content="在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：对于SQL查询慢的问题你要怎么去发现和解决。最初我也大概只能回答个索引相关的，比如”通过EXPLAIN查看查询的访问类型和一些查询情况”， “查看是否可以在某些表的字段增加索引然后改写查询语句”等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这">
 <meta property="og:type" content="article">
-<meta property="og:title" content="在文章中添加图片">
-<meta property="og:url" content="https://iconson.top/TestPage/index.html">
+<meta property="og:title" content="MySQL慢查询-查询优化">
+<meta property="og:url" content="https://iconson.top/MySQL%E6%85%A2%E6%9F%A5%E8%AF%A2-%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/index.html">
 <meta property="og:site_name" content="IconSon-Blog">
-<meta property="og:description" content="这是通过 hexo new TestPage 命令所创建的一篇文章，存放在source目录下的_posts. 贴张图片测试一下能不能成功显示出来：👇">
+<meta property="og:description" content="在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：对于SQL查询慢的问题你要怎么去发现和解决。最初我也大概只能回答个索引相关的，比如”通过EXPLAIN查看查询的访问类型和一些查询情况”， “查看是否可以在某些表的字段增加索引然后改写查询语句”等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://iconson.top/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg">
-<meta property="og:image" content="https://iconson.top/TestPage/image-20210507150008908.png">
-<meta property="og:image" content="https://iconson.top/TestPage/image-20210507150259312.png">
-<meta property="article:published_time" content="2021-05-07T06:27:50.000Z">
-<meta property="article:modified_time" content="2021-05-12T06:58:11.963Z">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817172702465.png">
+<meta property="article:published_time" content="2022-08-17T07:54:25.426Z">
+<meta property="article:modified_time" content="2022-08-17T09:56:04.772Z">
 <meta property="article:author" content="Johnson">
-<meta property="article:tag" content="test">
-<meta property="article:tag" content="hexo">
+<meta property="article:tag" content="MySQL">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://iconson.top/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg">
+<meta name="twitter:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png">
 
 
-<link rel="canonical" href="https://iconson.top/TestPage/">
+<link rel="canonical" href="https://iconson.top/MySQL%E6%85%A2%E6%9F%A5%E8%AF%A2-%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{&quot;sidebar&quot;:&quot;&quot;,&quot;isHome&quot;:false,&quot;isPost&quot;:true,&quot;lang&quot;:&quot;zh-CN&quot;,&quot;comments&quot;:true,&quot;permalink&quot;:&quot;https:&#x2F;&#x2F;iconson.top&#x2F;TestPage&#x2F;&quot;,&quot;path&quot;:&quot;TestPage&#x2F;&quot;,&quot;title&quot;:&quot;在文章中添加图片&quot;}</script>
+<script class="next-config" data-name="page" type="application/json">{&quot;sidebar&quot;:&quot;&quot;,&quot;isHome&quot;:false,&quot;isPost&quot;:true,&quot;lang&quot;:&quot;zh-CN&quot;,&quot;comments&quot;:true,&quot;permalink&quot;:&quot;https:&#x2F;&#x2F;iconson.top&#x2F;MySQL%E6%85%A2%E6%9F%A5%E8%AF%A2-%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96&#x2F;&quot;,&quot;path&quot;:&quot;MySQL慢查询-查询优化&#x2F;&quot;,&quot;title&quot;:&quot;MySQL慢查询-查询优化&quot;}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">&quot;&quot;</script>
-<title>在文章中添加图片 | IconSon-Blog</title><script src="/js/config.js"></script>
+<title>MySQL慢查询-查询优化 | IconSon-Blog</title><script src="/js/config.js"></script>
   
 
   <script src="/js/third-party/analytics/baidu-analytics.js"></script>
@@ -168,7 +166,7 @@
 
   <aside class="sidebar">
 
-    <div class="sidebar-inner sidebar-overview-active">
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
       <ul class="sidebar-nav">
         <li class="sidebar-nav-toc">
           文章目录
@@ -181,6 +179,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9F%A5%E8%AF%A2%E6%85%A2"><span class="nav-number">1.</span> <span class="nav-text">为什么查询慢</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%98%E5%8C%96%E6%9F%A5%E8%AF%A2%E8%AE%BF%E9%97%AE"><span class="nav-number">2.</span> <span class="nav-text">优化查询访问</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%98%AF%E5%90%A6%E6%9F%A5%E8%AF%A2%E4%BA%86%E5%BE%88%E5%A4%9A%E4%B8%8D%E9%9C%80%E8%A6%81%E7%9A%84%E6%95%B0%E6%8D%AE"><span class="nav-number">2.1.</span> <span class="nav-text">是否查询了很多不需要的数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MySQL%E6%98%AF%E5%90%A6%E5%88%86%E6%9E%90%E6%89%AB%E6%8F%8F%E9%A2%9D%E5%A4%96%E7%9A%84%E6%95%B0%E6%8D%AE"><span class="nav-number">2.2.</span> <span class="nav-text">MySQL是否分析扫描额外的数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E6%9E%84%E6%9F%A5%E8%AF%A2%E6%96%B9%E5%BC%8F"><span class="nav-number">3.</span> <span class="nav-text">重构查询方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -253,7 +252,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://iconson.top/TestPage/">
+    <link itemprop="mainEntityOfPage" href="https://iconson.top/MySQL%E6%85%A2%E6%9F%A5%E8%AF%A2-%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -266,7 +265,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          在文章中添加图片
+          MySQL慢查询-查询优化
         </h1>
 
         <div class="post-meta-container">
@@ -276,23 +275,17 @@
         <i class="far fa-calendar"></i>
       </span>
       <span class="post-meta-item-text">发表于</span>
+      
 
-      <time title="创建时间：2021-05-07 14:27:50" itemprop="dateCreated datePublished" datetime="2021-05-07T14:27:50+08:00">2021-05-07</time>
+      <time title="创建时间：2022-08-17 15:54:25 / 修改时间：17:56:04" itemprop="dateCreated datePublished" datetime="2022-08-17T15:54:25+08:00">2022-08-17</time>
     </span>
-      <span class="post-meta-item">
-        <span class="post-meta-item-icon">
-          <i class="far fa-calendar-check"></i>
-        </span>
-        <span class="post-meta-item-text">更新于</span>
-        <time title="修改时间：2021-05-12 14:58:11" itemprop="dateModified" datetime="2021-05-12T14:58:11+08:00">2021-05-12</time>
-      </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
         <i class="far fa-folder"></i>
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/hexo%E9%85%8D%E7%BD%AE/" itemprop="url" rel="index"><span itemprop="name">hexo配置</span></a>
+          <a href="/categories/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
         </span>
     </span>
 
@@ -313,23 +306,30 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
-<p>贴张图片测试一下能不能成功显示出来：👇</p>
-<p><img data-src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
+        <p>在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：<code>对于SQL查询慢的问题你要怎么去发现和解决</code>。最初我也大概只能回答个索引相关的，比如”通过EXPLAIN查看查询的访问类型和一些查询情况”， “查看是否可以在某些表的字段增加索引然后改写查询语句”等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这篇文章便是我针对这本书第六章内容的一些整理总结(其实就是相当于摘抄吧 :triumph: )。方便自己记忆的同时也放到博客上来给博客更新一下(其实是都放到本地没怎么上传到博客，属于是懒:dog:了)</p>
 <span id="more"></span>
 
-<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
-
-<p>修改<code>站点配置文件</code></p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-<p>这样在创建文章时，会同样生成一个同名文件夹</p>
-<p><img data-src="/TestPage/image-20210507150008908.png" alt="实例"></p>
-<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
-<p><img data-src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
-<p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p>
-<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
+<h2 id="为什么查询慢"><a href="#为什么查询慢" class="headerlink" title="为什么查询慢"></a>为什么查询慢</h2><p>​    在我们看待这个问题的时候，我们就要想：是什么造成SQL的查询慢呢，通过对索引的学习我们也知道索引对于高性能的重要性，但光有索引也是不够的，查询语句的合理性也是要考虑的，如果一个查询语句写的很烂，即使我们的表结构和索引设计的再好，那也是无济于事的。</p>
+<p>​    查询的生命周期大致可以这么来看：客户端发送请求到服务器:point_right:服务器进行解析:point_right:生成执行计划:point_right:<strong>执行</strong>:point_right:返回结果给客户端。一个查询会在一个生命周期内涉及到这些个任务，而每个任务的完成时间也是不同的。我们可以针对这么一个大概的生命周期概念，来对我们的查询进行一个优化。</p>
+<h2 id="优化查询访问"><a href="#优化查询访问" class="headerlink" title="优化查询访问"></a>优化查询访问</h2><p>​    查询性能低一个最基本的原因是我们访问的数据太多，针对查询数据多这一问题，我们可以看看是否有存在这么两个问题：<code>是否查询了很多我们不需要的数据</code>；<code>MySQL的服务器是否在分析大量超过我们需要的数据</code>。</p>
+<h3 id="是否查询了很多不需要的数据"><a href="#是否查询了很多不需要的数据" class="headerlink" title="是否查询了很多不需要的数据"></a>是否查询了很多不需要的数据</h3><p>​    我们通常会认为MySQL返回的是我们需要的数据，但实际上MySQL是<strong>先返回全部的结果集再进行计算</strong>，所以我们有时候要考虑我们是否真的需要这么多数据呢，就好像我们要让一个页面显示10条数据，我们就要先查个100条数据然后再选前10条展示吗，显而易见是不用的，我们加个 limit 即可。</p>
+<p>​    对于<code>select *</code>的写法我们也要在使用的时候去想我们是否真的需要去使用它呢，对于一些开发者来说，在知道其性能影响的情况下，这样的写法可以简易开发和做到代码复用，是值得考虑的。<code>select *</code>会使得优化器无法完成<strong>索引覆盖扫描</strong>这类的优化，也会给服务器带来额外的IO、内存和CPU的消耗，在不需要<code>select *</code>的时候它便会给我们造成本没有的性能影响了。</p>
+<p>​    也有这么一种容易发生的情况，就是我们多次重复执行了相同的执行并且返回相同的数据，对于这样的数据，我们可以在第一次查询该数据时将其缓存起来，这样后面再需要时直接从缓存中获取即可。</p>
+<h3 id="MySQL是否分析扫描额外的数据"><a href="#MySQL是否分析扫描额外的数据" class="headerlink" title="MySQL是否分析扫描额外的数据"></a>MySQL是否分析扫描额外的数据</h3><p>​    当我们确认我们查询返回的确实是我们需要的数据后，我们就应该看看查询为了返回结果是否扫描了过多的数据。通常简单的衡量查询开销的指标是：<code>响应时间</code>,<code>扫描行数</code>,<code>返回行数</code>，这三个指标都记录在了MySQL的<strong>慢日志</strong>中，所以<strong>检查慢日志记录是扫描行数过多的查询的好办法</strong>。</p>
+<p>​    如果我们的查询扫描了大量的数据却只返回很少的行，可以考虑如下的优化方式：</p>
+<ul>
+<li>使用<strong>索引覆盖扫描</strong>，使存储引擎不需要回表即可返回结果</li>
+<li>改变库表结构</li>
+<li>重写这个复杂查询</li>
+</ul>
+<h2 id="重构查询方式"><a href="#重构查询方式" class="headerlink" title="重构查询方式"></a>重构查询方式</h2><p>​    如果我们的查询的列确实是需要的，索引的设计和库表的设计也没什么问题的时候，那么就可以考虑下更改我们的查询方式。对于一个大查询，我们可以考虑对它进行<code>分而治之</code>的方法来进行多个小查询。对于一些关联查询，我们也考虑是不是能对它进行<strong>分解</strong>，就像书上的例子那样：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png" alt="image-20220817170821072"></p>
+<p>​    这样可以让缓存的效率更高，因为有缓存，我们可能可以跳过某条查询或者减少IN()里的内容。也可以减少了锁的竞争。这样的查询也可能能提升查询效率，<code>IN()</code>让MySQL按照ID顺序进行查询，顺序IO是要比随机IO高效的。这样还可以减少冗余记录的查询，在数据库上关联查询我们就可能需要重复访问同一数据，在应用层上进行关联让我们可以对某条数据只查询一次，减少了网络和内存的消耗。</p>
+<p>上面所讲的是针对查询的访问和方式，但如果知道MySQL如何优化和执行查询时，那我们在优化查询时便可以按照一些原则让优化器能按我们设想的方向运行。下面这张图是发送一个请求时MySQL所做的事情：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817172702465.png" alt="image-20220817172702465"></p>
+<p>图中的<code>查询缓存</code>在MySQL8已经是关闭的了，《高性能MySQL》所基于的版本还是5版本的，所以如果是8版本或以上的是可以忽略掉查询缓存的。书上在<code>查询优化</code>做了很多的篇幅进行讲解，讲了很多优化器在一些查询上的优化细节和做法，这部分如果放上来记录的话篇幅还是挺长的，多到我也不知道怎么整理写上了比较好，所以第六章的查询优化处理这块还是很建议大家去阅读原书的，在这里我就先不写着了。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​    一个高性能的查询，需要好的库表设计、索引设计、查询语句设计和查询的优化方式，而查询的优化设计又是很多细节的，所以当SQL查询慢的原因是由于我们查询语句设计不妥当时，便可以照着该书籍第六章的方法去进行优化。</p>
+<p>​    通过网上资料的搜索SQL查询慢的原因也可能不在于查询语句的问题，比如网络不好的情况下，客户端和服务端之间的连接和传输受到影响、IO吞吐量小、缓存不够、出现死锁等等，硬件软件都会或多或少的影响到查询，还是要针对特定的原因去寻找对应的解决办法的。对于我个人来说，排插SQL查询慢的基本方向是通过查询<strong>慢日志</strong>来定位慢查询SQL，然后通过<strong>explain</strong>命令去分析该SQL的执行计划后进行相应的优化，如果优化完还是查询慢或者没有什么优化方向后，就再去考虑网络、内存、服务器和应用程序设计上的问题。</p>
 
     </div>
 
@@ -339,22 +339,18 @@
 
     <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/test/" rel="tag"># test</a>
-              <a href="/tags/hexo/" rel="tag"># hexo</a>
+              <a href="/tags/MySQL/" rel="tag"># MySQL</a>
           </div>
 
         
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/hello-world/" rel="prev" title="Hello World">
-                  <i class="fa fa-chevron-left"></i> Hello World
+                <a href="/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/" rel="prev" title="JAVA均匀生成随机数">
+                  <i class="fa fa-chevron-left"></i> JAVA均匀生成随机数
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/makeUpdTime/" rel="next" title="在文章中添加更新时间">
-                  在文章中添加更新时间 <i class="fa fa-chevron-right"></i>
-                </a>
             </div>
           </div>
     </footer>
@@ -431,7 +427,7 @@
 
   
 
-  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{&quot;enable&quot;:true,&quot;per_page&quot;:true,&quot;tags&quot;:&quot;none&quot;,&quot;js&quot;:{&quot;url&quot;:&quot;https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;mathjax@3.1.4&#x2F;es5&#x2F;tex-mml-chtml.js&quot;,&quot;integrity&quot;:&quot;sha256-ncNI9OXOS5Ek4tzVYiOMmN&#x2F;KKCPZ6V0Cpv2P&#x2F;zHntiA&#x3D;&quot;}}</script>
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{&quot;enable&quot;:true,&quot;per_page&quot;:true,&quot;tags&quot;:&quot;none&quot;,&quot;js&quot;:{&quot;url&quot;:&quot;https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;mathjax@3.1.4&#x2F;es5&#x2F;tex-mml-chtml.js&quot;,&quot;integrity&quot;:&quot;sha256-ncNI9OXOS5Ek4tzVYiOMmN&#x2F;KKCPZ6V0Cpv2P&#x2F;zHntiA&#x3D;&quot;}}</script>
 <script src="/js/third-party/math/mathjax.js"></script>
 
 
