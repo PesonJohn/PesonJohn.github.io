@@ -1,6 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>浅谈虚拟内存</title>
+    <url>/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/</url>
+    <content><![CDATA[<p>​    关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。</p>
+<span id="more"></span>
+
+<h2 id="何为虚拟内存"><a href="#何为虚拟内存" class="headerlink" title="何为虚拟内存"></a>何为虚拟内存</h2><p>​    如果我们所有操作都直接去操作到物理内存的话很容易出现问题，当太多的进程需要太多的内存时，会因为内存的不足而导致部分进程无法运行。而且由于都是操作一块物理内存，很容易有一个进程写了另一个进程使用的内存造成问题，不好管理。所以为了更好地对内存进行管理，就有了虚拟内存。</p>
+<p>​    虚拟内存是对主存的一个抽象，我个人的理解来说，虚拟内存是磁盘里某个部分的映射，也就是虚拟内存其实是磁盘里某块连续的空间来的。虚拟内存的好处如下：</p>
+<blockquote>
+<ul>
+<li>把主存当作是一个存储在磁盘上的地址空间的<strong>高速缓存</strong>，虚拟内存维护的是磁盘里面的数据，而这些数据在需要时会从磁盘缓存到主存中，让进程认为自己拥有这么一块主存空间，而主存存储一些活动区域，进程的部分代码可以缓存在其中，大大地<strong>提高了主存的利用率</strong>。</li>
+<li>虚拟内存为每个进程都提供了一致的地址空间，每个进程都有自己的私有区域和共享区域，即<strong>方便了内存的管理</strong>，也<strong>保护了每个进程的地址空间不被其他进程破坏</strong>。</li>
+</ul>
+</blockquote>
+<h2 id="虚拟内存结构"><a href="#虚拟内存结构" class="headerlink" title="虚拟内存结构"></a>虚拟内存结构</h2><p>​    CSAPP中有这么一张图描绘了Linux下虚拟内存的结构：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png" alt="image-20220821174738227"></p>
+<p>​    图中可以看到虚拟内存的结构就是一个<code>[内核虚拟内存][进程虚拟内存]</code>。</p>
+<h3 id="内核虚拟内存"><a href="#内核虚拟内存" class="headerlink" title="内核虚拟内存"></a>内核虚拟内存</h3><p>​    内核虚拟内存中又有对于每个进程而言相同和不相同的区域。物理内存和内核代码数据结构对每个进程来说是一样的，这部分区域里有着所映射的所有进程共享的物理页面，还有内核的代码和全局数据结构。另外一部分就是每个进程不同的数据部分，例如每个进程自己的页表、描述了进程任务的<code>task_struct</code>结构、描述了进程使用的虚拟内存情况的<code>mm_struct</code>结构和内核在执行上下文中执行代码时使用的栈。</p>
+<p>​    <code>task_struct</code>是内核为每一个进程维护的一个单独的任务结构，这个结构的元素包含或者指向内核运行该进程所需要的所有信息，例如<strong>进程ID、指向用户栈的指针、可执行目标文件的名字和程序计数器</strong>等。该结构里有一个元素指向了<code>mm_struct</code>，这个结构描述了虚拟内存当前的状态，该结构里我们关注<code>pgd</code>和<code>mmap</code>这两个字段，<code>pgd</code>指向的是一级页表的基址，而<code>mmap</code>指向的是一个描述区域结构<code>vm_area_structs</code> 的链表，这个区域结构描述了当前虚拟地址空间的一个区域。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png" alt="image-20220821180629323"></p>
+<p>​    <code>vm_prot</code>描述了该区域内的页面读写权限，<code>vm_flags</code>描述了该区域内的页面是私有还是共享的。</p>
+<h3 id="进程虚拟内存"><a href="#进程虚拟内存" class="headerlink" title="进程虚拟内存"></a>进程虚拟内存</h3><p>​    进程虚拟内存从下到上的顺序是<code>.text</code>→<code>.data</code>→<code>.bss</code>→<code>运行时堆</code>→<code>共享库的内存映射区域</code>→<code>用户栈</code>，剩下的一些区域没有虚拟页，内核不记录这些不存在的虚拟页，这些部分也不占用任何的资源。</p>
+<p>​    <code>.text</code>存储的是编译好的代码段。</p>
+<p>​    <code>.data</code>存储的是已经进行了初始化的数据。</p>
+<p>​    <code>.bss</code>存储的是还未进行初始化的数据或者初始化为0的数据，是请求二进制零的，仅是占位符，不占空间。</p>
+<p>​    <strong><code>.text</code>段是只读的</strong>，而**<code>.data</code>和<code>.bss</code>段是可读/写的**。</p>
+<p>​    <code>运行时堆</code>则是运行时创建的一个区域，在C/C++中通常是通过<code>malloc</code>进行分配的，堆主要是存储的是我们运行进程时创建的一些变量对象等内容，内核维护着一个<code>brk</code>指针，指向堆的顶部。</p>
+<p>​    <code>共享库的映射区域</code>存储的就是与当前进程链接的共享对象的映射，概括的说就是动态库、共享内存等。</p>
+<p>​    <code>用户栈</code>则存储的是局部变量和函数调用的上下文等。</p>
+<p>​    如果学过Java的JVM的，对堆和栈都或多或少有印象和认识的，学习了虚拟内存后再去回顾JVM中类加载机制、对象创建和<strong>volatile</strong>变量的底层原理，说不定会有更加深刻的认知和记忆。</p>
+<h2 id="虚拟页"><a href="#虚拟页" class="headerlink" title="虚拟页"></a>虚拟页</h2><p>​    虚拟内存被系统分割成大小固定的块，这些块我们叫做<strong>虚拟页</strong>，物理内存分割的我们类似地称为<strong>物理页</strong>。虚拟页可以分为下面这三种：</p>
+<blockquote>
+<ul>
+<li>已经被分配且缓存在物理内存中的</li>
+<li>已经被分配但是还未缓存在物理内存中的</li>
+<li>还未被分配的。</li>
+</ul>
+</blockquote>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png" alt="image-20220821223900550"></p>
+<h3 id="页表"><a href="#页表" class="headerlink" title="页表"></a>页表</h3><p>​    为了判定一个虚拟页是否有缓存在物理内存中，使用到了一个叫做<strong>页表</strong>的结构，虚拟地址空间的每个页都有个在页表的页表项，这个页表项存有这个页面的有效位和其对应的物理地址或者磁盘地址，当有效位为1时，为物理地址，有效位为0时，如果页面已经分配，则为磁盘地址，否则为空地址。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png" alt="image-20220821233804778"></p>
+<p>​    页面的查找流程通常是这样的：处理器生成一个虚拟地址给CPU里的MMU(内存管理单元)，然后MMU翻译出这个虚拟地址所对应的页表项地址去页表查找，如果对应的页在内存中，则内存向MMU返回对应的页表项，然后MMU得出对应的物理地址后传送到内存中，最后内存返回所请求的数据给处理器。</p>
+<h3 id="缺页"><a href="#缺页" class="headerlink" title="缺页"></a>缺页</h3><p>​    上面是比较理想的情况，也有出现缺页的情况，即对应的物理页不在内存中，这时候就会触发缺页中断，系统由用户态进入到内核态，调用缺页异常处理程序，这个程序会选择一个牺牲页，如果该页面是个脏页面，内核就会把它写回磁盘后释放掉。然后再从磁盘中将对应的页面复制到内存中并更新页表，重新回到引起缺页的指令。而这在磁盘和内存之间传送页的行为称之为<strong>交换</strong>或者<strong>页面调度</strong>。要注意页面没有命中的影响是挺大的。如果调度的页面大小超过了物理内存的大小，就会不断进行页面地换入换出，造成<strong>抖动</strong>，这是很不好的影响。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png" alt="image-20220821231454373"></p>
+<h3 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h3><p>​    通常我们的页面的大小为<code>4KB</code>，一个页表项的大小为<code>4B</code>，在32位的系统下，就有$$2^{20}$$个页面，这样一个进程的页表就达到了<code>4MB</code>。所以就有了<strong>多级页表</strong>。假设我们有一个二级页表，第一级页表存储的是指向第二级页表的地址，第二级页表存储的是物理地址或者磁盘地址。这样我们就可以用一个<code>4KB</code>的一级页表去管理理论上总共<code>4MB</code>的二级页表，这看起来好像比之前多了，但其实我们往往不会为一个进程分配那么多内存的，而且如果一级页表的某个页表项是空的，则其对应的二级页表也不会存在的，只有在需要时才会创建，我们假设一级页表只有20%的页面在使用，那么所需要的的内存就是$$4KB+4MB*0.2=0.804MB$$，对比起只有单独的页表的<code>4MB</code>，那是节省了巨大的内存。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png" alt="image-20220821233204041"></p>
+<h3 id="快表TLB"><a href="#快表TLB" class="headerlink" title="快表TLB"></a>快表TLB</h3><p>​    除了多级页表，也有一个<code>TLB</code>，即我们所说的<strong>快表</strong>。根据<strong>局部性原理</strong>，在一段时间内，整个程序的执行仅限于程序中的某一部分。相应地，执行所访问的存储空间也局限于某个内存区域。我们把程序最常访问的页表项存在快表中，且快表是在CPU芯片里的，地址的翻译步骤都在MMU上，如果命中页面的话那速度是非常快的。如果快表没有命中，就会查找常规的页表，然后把查找到的页表项也存储到快表中，这一步可能会覆盖掉某个快表上的条目。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png" alt="image-20220821233649707"></p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><blockquote>
+<ul>
+<li><a href="https://xiaolincoding.com/os/3_memory/vmem.html">小林coding-为什么要有虚拟内存</a></li>
+<li>《深入理解计算机系统》</li>
+</ul>
+</blockquote>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Mysql慢查询——查询优化</title>
     <url>/Mysql%E6%85%A2%E6%9F%A5%E8%AF%A2%E2%80%94%E2%80%94%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</url>
     <content><![CDATA[<p>在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：<code>对于SQL查询慢的问题你要怎么去发现和解决</code>。最初我也大概只能回答个索引相关的，比如”通过EXPLAIN查看查询的访问类型和一些查询情况”， “查看是否可以在某些表的字段增加索引然后改写查询语句”等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这篇文章便是我针对这本书第六章内容的一些整理总结(其实就是相当于摘抄吧 :triumph: )。方便自己记忆的同时也放到博客上来给博客更新一下(其实是都放到本地没怎么上传到博客，属于是懒:dog:了)</p>

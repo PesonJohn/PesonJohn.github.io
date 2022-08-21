@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+<script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+<link href="//cdn.bootcss.com/pace/1.0.2/themes/pink/pace-theme-flash.css" rel="stylesheet">
+<style>
+    .pace .pace-progress {
+        background: #1E92FB; /*进度条颜色*/
+        height: 3px;
+    }
+    .pace .pace-progress-inner {
+         box-shadow: 0 0 10px #1E92FB, 0 0 5px     #1E92FB; /*阴影颜色*/
+    }
+    .pace .pace-activity {
+        border-top-color: #1E92FB;    /*上边框颜色*/
+        border-left-color: #1E92FB;    /*左边框颜色*/
+    }
+</style>
+
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="hYYSGC9sGEQIoR4T5O8LW0fwrC6G8Zb4ufSETCWpxI8">
+  <meta name="msvalidate.01" content="f2a6bd0a21c799ca274c82ac47855616">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.3/css/all.min.css" integrity="sha256-2H3fkXt6FEmrReK448mDVGKb3WW2ZZw35gI7vqHOE4Y=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{&quot;hostname&quot;:&quot;iconson.top&quot;,&quot;root&quot;:&quot;&#x2F;&quot;,&quot;images&quot;:&quot;&#x2F;images&quot;,&quot;scheme&quot;:&quot;Mist&quot;,&quot;version&quot;:&quot;8.4.0&quot;,&quot;exturl&quot;:false,&quot;sidebar&quot;:{&quot;position&quot;:&quot;left&quot;,&quot;display&quot;:&quot;post&quot;,&quot;padding&quot;:18,&quot;offset&quot;:12},&quot;copycode&quot;:true,&quot;bookmark&quot;:{&quot;enable&quot;:false,&quot;color&quot;:&quot;#222&quot;,&quot;save&quot;:&quot;auto&quot;},&quot;fancybox&quot;:false,&quot;mediumzoom&quot;:false,&quot;lazyload&quot;:{&quot;enable&quot;:true,&quot;onlypost&quot;:false,&quot;loadingImg&quot;:&quot;&#x2F;images&#x2F;loading.gif&quot;},&quot;pangu&quot;:false,&quot;comments&quot;:{&quot;style&quot;:&quot;tabs&quot;,&quot;active&quot;:null,&quot;storage&quot;:true,&quot;lazyload&quot;:false,&quot;nav&quot;:null},&quot;motion&quot;:{&quot;enable&quot;:true,&quot;async&quot;:false,&quot;transition&quot;:{&quot;post_block&quot;:&quot;fadeIn&quot;,&quot;post_header&quot;:&quot;fadeInDown&quot;,&quot;post_body&quot;:&quot;fadeInDown&quot;,&quot;coll_header&quot;:&quot;fadeInLeft&quot;,&quot;sidebar&quot;:&quot;fadeInUp&quot;}},&quot;prism&quot;:false,&quot;i18n&quot;:{&quot;placeholder&quot;:&quot;搜索...&quot;,&quot;empty&quot;:&quot;没有找到任何搜索结果：${query}&quot;,&quot;hits_time&quot;:&quot;找到 ${hits} 个搜索结果（用时 ${time} 毫秒）&quot;,&quot;hits&quot;:&quot;找到 ${hits} 个搜索结果&quot;},&quot;path&quot;:&quot;&#x2F;search.xml&quot;,&quot;localsearch&quot;:{&quot;enable&quot;:true,&quot;trigger&quot;:&quot;auto&quot;,&quot;top_n_per_article&quot;:1,&quot;unescape&quot;:false,&quot;preload&quot;:false}}</script>
+<meta name="description" content="​    关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浅谈虚拟内存">
+<meta property="og:url" content="https://iconson.top/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/index.html">
+<meta property="og:site_name" content="IconSon-Blog">
+<meta property="og:description" content="​    关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png">
+<meta property="og:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png">
+<meta property="article:published_time" content="2022-08-21T09:16:05.000Z">
+<meta property="article:modified_time" content="2022-08-21T15:39:30.744Z">
+<meta property="article:author" content="Johnson">
+<meta property="article:tag" content="操作系统">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png">
+
+
+<link rel="canonical" href="https://iconson.top/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{&quot;sidebar&quot;:&quot;&quot;,&quot;isHome&quot;:false,&quot;isPost&quot;:true,&quot;lang&quot;:&quot;zh-CN&quot;,&quot;comments&quot;:true,&quot;permalink&quot;:&quot;https:&#x2F;&#x2F;iconson.top&#x2F;%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98&#x2F;&quot;,&quot;path&quot;:&quot;浅谈虚拟内存&#x2F;&quot;,&quot;title&quot;:&quot;浅谈虚拟内存&quot;}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">&quot;&quot;</script>
+<title>浅谈虚拟内存 | IconSon-Blog</title><script src="/js/config.js"></script>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?30bf853185d24e430c70a5b09e8cfcd2"></script>
+
+
+
+  
+  <!--鼠标移动特效-->
+  <canvas class="love" style="position: fixed;left: 0;top: 0;z-index: 1; pointer-events: none;" ></canvas> 
+  <script type="text/javascript" src="//cdn.bootcss.com/animejs/2.2.0/anime.min.js"></script> 
+  <script type="text/javascript" src="/js/cursor/love.min.js"></script>
+  
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="IconSon-Blog" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+  <a target="_blank" rel="noopener" href="https://github.com/PesonJohn" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">IconSon-Blog</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%95%E4%B8%BA%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98"><span class="nav-number">1.</span> <span class="nav-text">何为虚拟内存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">虚拟内存结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98"><span class="nav-number">2.1.</span> <span class="nav-text">内核虚拟内存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98"><span class="nav-number">2.2.</span> <span class="nav-text">进程虚拟内存</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E9%A1%B5"><span class="nav-number">3.</span> <span class="nav-text">虚拟页</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A1%B5%E8%A1%A8"><span class="nav-number">3.1.</span> <span class="nav-text">页表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%BA%E9%A1%B5"><span class="nav-number">3.2.</span> <span class="nav-text">缺页</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E7%BA%A7%E9%A1%B5%E8%A1%A8"><span class="nav-number">3.3.</span> <span class="nav-text">多级页表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BF%AB%E8%A1%A8TLB"><span class="nav-number">3.4.</span> <span class="nav-text">快表TLB</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">4.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Johnson"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Johnson</p>
+  <div class="site-description" itemprop="description">平平无奇小Five</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/PesonJohn" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;PesonJohn" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://iconson.top/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Johnson">
+      <meta itemprop="description" content="平平无奇小Five">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="IconSon-Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          浅谈虚拟内存
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2022-08-21 17:16:05 / 修改时间：23:39:30" itemprop="dateCreated datePublished" datetime="2022-08-21T17:16:05+08:00">2022-08-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>​    关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。</p>
+<span id="more"></span>
+
+<h2 id="何为虚拟内存"><a href="#何为虚拟内存" class="headerlink" title="何为虚拟内存"></a>何为虚拟内存</h2><p>​    如果我们所有操作都直接去操作到物理内存的话很容易出现问题，当太多的进程需要太多的内存时，会因为内存的不足而导致部分进程无法运行。而且由于都是操作一块物理内存，很容易有一个进程写了另一个进程使用的内存造成问题，不好管理。所以为了更好地对内存进行管理，就有了虚拟内存。</p>
+<p>​    虚拟内存是对主存的一个抽象，我个人的理解来说，虚拟内存是磁盘里某个部分的映射，也就是虚拟内存其实是磁盘里某块连续的空间来的。虚拟内存的好处如下：</p>
+<blockquote>
+<ul>
+<li>把主存当作是一个存储在磁盘上的地址空间的<strong>高速缓存</strong>，虚拟内存维护的是磁盘里面的数据，而这些数据在需要时会从磁盘缓存到主存中，让进程认为自己拥有这么一块主存空间，而主存存储一些活动区域，进程的部分代码可以缓存在其中，大大地<strong>提高了主存的利用率</strong>。</li>
+<li>虚拟内存为每个进程都提供了一致的地址空间，每个进程都有自己的私有区域和共享区域，即<strong>方便了内存的管理</strong>，也<strong>保护了每个进程的地址空间不被其他进程破坏</strong>。</li>
+</ul>
+</blockquote>
+<h2 id="虚拟内存结构"><a href="#虚拟内存结构" class="headerlink" title="虚拟内存结构"></a>虚拟内存结构</h2><p>​    CSAPP中有这么一张图描绘了Linux下虚拟内存的结构：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png" alt="image-20220821174738227"></p>
+<p>​    图中可以看到虚拟内存的结构就是一个<code>[内核虚拟内存][进程虚拟内存]</code>。</p>
+<h3 id="内核虚拟内存"><a href="#内核虚拟内存" class="headerlink" title="内核虚拟内存"></a>内核虚拟内存</h3><p>​    内核虚拟内存中又有对于每个进程而言相同和不相同的区域。物理内存和内核代码数据结构对每个进程来说是一样的，这部分区域里有着所映射的所有进程共享的物理页面，还有内核的代码和全局数据结构。另外一部分就是每个进程不同的数据部分，例如每个进程自己的页表、描述了进程任务的<code>task_struct</code>结构、描述了进程使用的虚拟内存情况的<code>mm_struct</code>结构和内核在执行上下文中执行代码时使用的栈。</p>
+<p>​    <code>task_struct</code>是内核为每一个进程维护的一个单独的任务结构，这个结构的元素包含或者指向内核运行该进程所需要的所有信息，例如<strong>进程ID、指向用户栈的指针、可执行目标文件的名字和程序计数器</strong>等。该结构里有一个元素指向了<code>mm_struct</code>，这个结构描述了虚拟内存当前的状态，该结构里我们关注<code>pgd</code>和<code>mmap</code>这两个字段，<code>pgd</code>指向的是一级页表的基址，而<code>mmap</code>指向的是一个描述区域结构<code>vm_area_structs</code> 的链表，这个区域结构描述了当前虚拟地址空间的一个区域。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png" alt="image-20220821180629323"></p>
+<p>​    <code>vm_prot</code>描述了该区域内的页面读写权限，<code>vm_flags</code>描述了该区域内的页面是私有还是共享的。</p>
+<h3 id="进程虚拟内存"><a href="#进程虚拟内存" class="headerlink" title="进程虚拟内存"></a>进程虚拟内存</h3><p>​    进程虚拟内存从下到上的顺序是<code>.text</code>→<code>.data</code>→<code>.bss</code>→<code>运行时堆</code>→<code>共享库的内存映射区域</code>→<code>用户栈</code>，剩下的一些区域没有虚拟页，内核不记录这些不存在的虚拟页，这些部分也不占用任何的资源。</p>
+<p>​    <code>.text</code>存储的是编译好的代码段。</p>
+<p>​    <code>.data</code>存储的是已经进行了初始化的数据。</p>
+<p>​    <code>.bss</code>存储的是还未进行初始化的数据或者初始化为0的数据，是请求二进制零的，仅是占位符，不占空间。</p>
+<p>​    <strong><code>.text</code>段是只读的</strong>，而**<code>.data</code>和<code>.bss</code>段是可读/写的**。</p>
+<p>​    <code>运行时堆</code>则是运行时创建的一个区域，在C/C++中通常是通过<code>malloc</code>进行分配的，堆主要是存储的是我们运行进程时创建的一些变量对象等内容，内核维护着一个<code>brk</code>指针，指向堆的顶部。</p>
+<p>​    <code>共享库的映射区域</code>存储的就是与当前进程链接的共享对象的映射，概括的说就是动态库、共享内存等。</p>
+<p>​    <code>用户栈</code>则存储的是局部变量和函数调用的上下文等。</p>
+<p>​    如果学过Java的JVM的，对堆和栈都或多或少有印象和认识的，学习了虚拟内存后再去回顾JVM中类加载机制、对象创建和<strong>volatile</strong>变量的底层原理，说不定会有更加深刻的认知和记忆。</p>
+<h2 id="虚拟页"><a href="#虚拟页" class="headerlink" title="虚拟页"></a>虚拟页</h2><p>​    虚拟内存被系统分割成大小固定的块，这些块我们叫做<strong>虚拟页</strong>，物理内存分割的我们类似地称为<strong>物理页</strong>。虚拟页可以分为下面这三种：</p>
+<blockquote>
+<ul>
+<li>已经被分配且缓存在物理内存中的</li>
+<li>已经被分配但是还未缓存在物理内存中的</li>
+<li>还未被分配的。</li>
+</ul>
+</blockquote>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png" alt="image-20220821223900550"></p>
+<h3 id="页表"><a href="#页表" class="headerlink" title="页表"></a>页表</h3><p>​    为了判定一个虚拟页是否有缓存在物理内存中，使用到了一个叫做<strong>页表</strong>的结构，虚拟地址空间的每个页都有个在页表的页表项，这个页表项存有这个页面的有效位和其对应的物理地址或者磁盘地址，当有效位为1时，为物理地址，有效位为0时，如果页面已经分配，则为磁盘地址，否则为空地址。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png" alt="image-20220821233804778"></p>
+<p>​    页面的查找流程通常是这样的：处理器生成一个虚拟地址给CPU里的MMU(内存管理单元)，然后MMU翻译出这个虚拟地址所对应的页表项地址去页表查找，如果对应的页在内存中，则内存向MMU返回对应的页表项，然后MMU得出对应的物理地址后传送到内存中，最后内存返回所请求的数据给处理器。</p>
+<h3 id="缺页"><a href="#缺页" class="headerlink" title="缺页"></a>缺页</h3><p>​    上面是比较理想的情况，也有出现缺页的情况，即对应的物理页不在内存中，这时候就会触发缺页中断，系统由用户态进入到内核态，调用缺页异常处理程序，这个程序会选择一个牺牲页，如果该页面是个脏页面，内核就会把它写回磁盘后释放掉。然后再从磁盘中将对应的页面复制到内存中并更新页表，重新回到引起缺页的指令。而这在磁盘和内存之间传送页的行为称之为<strong>交换</strong>或者<strong>页面调度</strong>。要注意页面没有命中的影响是挺大的。如果调度的页面大小超过了物理内存的大小，就会不断进行页面地换入换出，造成<strong>抖动</strong>，这是很不好的影响。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png" alt="image-20220821231454373"></p>
+<h3 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h3><p>​    通常我们的页面的大小为<code>4KB</code>，一个页表项的大小为<code>4B</code>，在32位的系统下，就有$$2^{20}$$个页面，这样一个进程的页表就达到了<code>4MB</code>。所以就有了<strong>多级页表</strong>。假设我们有一个二级页表，第一级页表存储的是指向第二级页表的地址，第二级页表存储的是物理地址或者磁盘地址。这样我们就可以用一个<code>4KB</code>的一级页表去管理理论上总共<code>4MB</code>的二级页表，这看起来好像比之前多了，但其实我们往往不会为一个进程分配那么多内存的，而且如果一级页表的某个页表项是空的，则其对应的二级页表也不会存在的，只有在需要时才会创建，我们假设一级页表只有20%的页面在使用，那么所需要的的内存就是$$4KB+4MB*0.2=0.804MB$$，对比起只有单独的页表的<code>4MB</code>，那是节省了巨大的内存。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png" alt="image-20220821233204041"></p>
+<h3 id="快表TLB"><a href="#快表TLB" class="headerlink" title="快表TLB"></a>快表TLB</h3><p>​    除了多级页表，也有一个<code>TLB</code>，即我们所说的<strong>快表</strong>。根据<strong>局部性原理</strong>，在一段时间内，整个程序的执行仅限于程序中的某一部分。相应地，执行所访问的存储空间也局限于某个内存区域。我们把程序最常访问的页表项存在快表中，且快表是在CPU芯片里的，地址的翻译步骤都在MMU上，如果命中页面的话那速度是非常快的。如果快表没有命中，就会查找常规的页表，然后把查找到的页表项也存储到快表中，这一步可能会覆盖掉某个快表上的条目。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png" alt="image-20220821233649707"></p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://xiaolincoding.com/os/3_memory/vmem.html">小林coding-为什么要有虚拟内存</a></li>
+<li>《深入理解计算机系统》</li>
+</ul>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" rel="tag"># 操作系统</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Mysql%E6%85%A2%E6%9F%A5%E8%AF%A2%E2%80%94%E2%80%94%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/" rel="prev" title="Mysql慢查询——查询优化">
+                  <i class="fa fa-chevron-left"></i> Mysql慢查询——查询优化
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments" id="lv-container" data-id="city" data-uid="MTAyMC81MzQwNS8yOTg3OQ"></div><script src="/js/comments.js"></script>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Johnson</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+<!--
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+-->
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@next-theme/pjax@0.5.0/pjax.min.js" integrity="sha256-3NkoLDrmHLTYj7csHIZSr0MHAFTXth7Ua/DDt4MRUAg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script><script src="/js/pjax.js"></script>
+
+  
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+  
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{&quot;enable&quot;:true,&quot;per_page&quot;:true,&quot;tags&quot;:&quot;none&quot;,&quot;js&quot;:{&quot;url&quot;:&quot;https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;mathjax@3.1.4&#x2F;es5&#x2F;tex-mml-chtml.js&quot;,&quot;integrity&quot;:&quot;sha256-ncNI9OXOS5Ek4tzVYiOMmN&#x2F;KKCPZ6V0Cpv2P&#x2F;zHntiA&#x3D;&quot;}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script src="/js/third-party/comments/livere.js"></script>
+
+  
+   <script type="text/javascript"
+   color="0,0,255" opacity='0.7' zIndex="-2" count="99" src="//cdn.bootcss.com/canvas-nest.js/1.0.0/canvas-nest.min.js"></script>
+  
+  <!-- 樱花特效 -->
+  
+      <script async src="/js/fairyDustCursor.js"></script>
+  
+
+
+  
+
+</body>
+</html>
