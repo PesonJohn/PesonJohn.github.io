@@ -1,3 +1,17 @@
+<!-- https://cdn.jsdelivr.net/npm/sakana-widget@2.2.1/lib/sakana.min.js -->
+<!-- https://cdnjs.cloudflare.com/ajax/libs/sakana-widget/2.2.1/sakana.min.js -->
+<div id="sakana-widget" style="position:fixed;bottom:10px;right:10px;"></div>
+<script>
+  function initSakanaWidget() {
+    new SakanaWidget().mount('#sakana-widget');
+  }
+</script>
+<script
+  async
+  onload="initSakanaWidget()"
+  src="https://cdn.jsdelivr.net/npm/sakana-widget@2.2.1/lib/sakana.min.js"
+></script>
+
 {%- if theme.back2top.enable and not theme.back2top.sidebar %}
   <div class="back-to-top" role="button" aria-label="{{ __('accessibility.back_to_top') }}">
     <i class="fa fa-arrow-up"></i>
@@ -21,6 +35,7 @@
 
   {{ next_url(github_URL, github_image, {class: 'github-corner', title: github_title, "aria-label": github_title}) }}
 {%- endif %}
+
 
 <noscript>
   <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
