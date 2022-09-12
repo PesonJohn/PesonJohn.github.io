@@ -1,396 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>JAVA均匀生成随机数</title>
-    <url>/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/</url>
-    <content><![CDATA[<h2 id="公式推导"><a href="#公式推导" class="headerlink" title="公式推导"></a>公式推导</h2><p>假如有一个函数rand2()会均匀生成[1,2]的随机数，现在想要实现一个rand4()的函数，第一次接触该类问题时，第一反应是如下所示：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="TAP"><figure class="iseeu highlight /tap"><table><tr><td class="code"><pre><span class="line">rand2() + rand2() = ? ==&gt; [2,4]</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 2 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 2 </span>    = 4</span><br><span class="line"></span><br><span class="line">// 为了把生成随机数的范围规约成[1,n]，于是在上一步的结果后减1</span><br><span class="line">(rand2()-1) + rand2() = ? ==&gt; [1,3]</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 2 </span>    = 3</span><br></pre></td></tr></table></figure></div>
-
+    <title>Spring--Bean的生命周期</title>
+    <url>/Spring-Bean%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/</url>
+    <content><![CDATA[<p>​    Spring对于Java开发者来说应该是再熟悉不过的一样东西了，这两天我把Spring的源码从官网下载下来并且进行编译，方便后面自己写一些测试用例(尽管被网速gank了很久)，并且结合了网上的一些文章去理解Spring IOC方面的知识和运作过程，我也跟着一些文章敲了测试用例，通过控制台的输出去记忆bean的生命周期过程，毕竟之前一直靠背去记忆实在是太容易忘记了。当然这篇文章也不会讲的很详细，这篇文章是在我看了一天的文章和敲完用例趁着记忆还深刻来通过记录博客来加深记忆的，下面就开始吧。</p>
 <span id="more"></span>
 
-<p>会发现生成的数字不是等概率的，造成这种情况的原因也很明显，有些数字是可以通过几个组合得来，有的只能通过一种组合得来</p>
-<p>若我们把(rand2()-1)乘以2，则会得到</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="TAP"><figure class="iseeu highlight /tap"><table><tr><td class="code"><pre><span class="line">(rand2()-1) ×<span class="number"> 2 </span>+ rand2() = ?</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 2 </span>    = 4</span><br></pre></td></tr></table></figure></div>
+<h2 id="Bean生命周期"><a href="#Bean生命周期" class="headerlink" title="Bean生命周期"></a>Bean生命周期</h2><p>​    这里首先贴出bean的一张生命周期图(图源来自JavaGuide)</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220912230549405.png" alt="image-20220912230549405"></p>
+<p>​    其大致的流程其实也可以理解成下面这样，我相信等后面自己敲用例后，读者会对这一过程更加的记忆深刻了：</p>
+<p>​    在开始初始化容器后，容器就会去<code>配置文件</code>中读取关于<code>bean的定义</code>，如果在配置bean时有赋予属性值，是可以读到这个值的。读取到定义后就会生成关于这个bean的实例。有实例之后就会对这个实例的属性进行设置set()。设置完属性后，如果检查到这个bean有实现比如<code>BeanNameAware</code>、<code>BeanFactoryAware</code>等这些诸如<code>*Aware</code>的接口，那么就会调用它们对应的<code>setBeanName(String beanName)</code>、<code>setBeanFactory(BeanFactory factory)</code>等<code>setXXX()</code>方法。在做完前面这些bean的实例化和属性设置的操作后就要开始进行初始化，<code>BeanPostProcessor</code>这一处理器有<code>postProcessBeforeInitialization()</code>和<code>postProcessAfterInitialization()</code>两个方法，前者是在bean初始化前执行，后者就是在bean初始化完成后执行，也就是上图的前置和后置处理，可以自行去定义里面的行为，不过要注意因为这两个方法的返回值是作为一个新的bean实例，所以通常返回值都是传入进来的bean对象而不是null。在这初始化的过程中会检查这个bean有没有实现<code>InitializingBean</code>接口，如果有的话则会去调用该接口的<code>afterPropertiesSet()</code>方法，然后再检查配置文件的bean标签中有没有<code>init-method</code>这一属性，有的话就会去调用配置文件里<code>init-method</code>指定的初始化方法，初始化完成后就会执行上面所说得<code>postProcessAfterInitialization</code>方法了。这样一个简单的容器初始化就这样完成了，然后就可以在容器中获取它。当我们要销毁容器时，会检查这个bean有没有实现<code>DisposableBean</code>这个接口，如果有实现则会调用这个方法的<code>destroy()</code>方法，然后再检查配置文件的bean标签有没有<code>destroy-method</code>这一属性，有的话就会去调用配置文件里<code>destroy-method</code>指定的销毁后的回调方法。至此一个简单的bean声明周期就这么结束了。</p>
+<h2 id="测试实现"><a href="#测试实现" class="headerlink" title="测试实现"></a>测试实现</h2><h3 id="实体类"><a href="#实体类" class="headerlink" title="实体类"></a>实体类</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.demo.pojo;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.BeansException;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Person</span> <span class="keyword">implements</span> <span class="title">BeanFactoryAware</span>, <span class="title">BeanNameAware</span>, <span class="title">InitializingBean</span>, <span class="title">DisposableBean</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> String name;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">int</span> age;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> BeanFactory beanFactory;</span><br><span class="line">	<span class="keyword">private</span> String beanName;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Person</span><span class="params">()</span></span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[构造器]调用Person的构造器实例化一个Person对象&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> name;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;注入属性name,值为&quot;</span>+name);</span><br><span class="line">		<span class="keyword">this</span>.name = name;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getAge</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> age;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setAge</span><span class="params">(<span class="keyword">int</span> age)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;注入属性age,值为&quot;</span>+age);</span><br><span class="line">		<span class="keyword">this</span>.age = age;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="string">&quot;Person&#123;&quot;</span> +</span><br><span class="line">				<span class="string">&quot;name=&#x27;&quot;</span> + name + <span class="string">&#x27;\&#x27;&#x27;</span> +</span><br><span class="line">				<span class="string">&quot;, age=&quot;</span> + age +</span><br><span class="line">				<span class="string">&#x27;&#125;&#x27;</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//BeanFactoryAware接口的方法</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setBeanFactory</span><span class="params">(BeanFactory beanFactory)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[BeanFactoryAware接口]调用BeanFactoryAware.setBeanFactory()方法&quot;</span>);</span><br><span class="line">		<span class="keyword">this</span>.beanFactory = beanFactory;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//BeanNameAware接口的方法</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setBeanName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[BeanNameAware接口]调用BeanNameAware.setBeanName()方法&quot;</span>);</span><br><span class="line">		<span class="keyword">this</span>.beanName = name;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//InitializingBean接口方法</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterPropertiesSet</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;属性设置完后[InitializingBean接口]调用InitializingBean.afterPropertiesSet()方法&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//DisposableBean接口方法</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">destroy</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;要销毁bean时[DisposableBean接口]调用DisposableBean.destroy()&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 通过&lt;bean&gt;的init-method属性指定的初始化方法</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">myInit</span><span class="params">()</span></span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[init-method]调用&lt;bean&gt;的init-method属性指定的初始化方法&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//通过&lt;bean&gt;的destroy-method属性指定的销毁方法</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">myDestroy</span><span class="params">()</span></span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[destroy-method]调用&lt;bean&gt;的destroy-method属性指定的初始化方法&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
 
-<p>得到的结果恰好是等概率的。我们可以通过这种方法实现rand2()-&gt;rand4()</p>
-<p>我们再举个例子：有两个均匀随机函数rand9()和rand7()，a=(rand9-1)*7，b = rand7，result = a+b</p>
-<p>则能得到下列表格的结果：</p>
-<table>
-<thead>
-<tr>
-<th>a\b</th>
-<th>1</th>
-<th>2</th>
-<th>3</th>
-<th>4</th>
-<th>5</th>
-<th>6</th>
-<th>7</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>0</td>
-<td>1</td>
-<td>2</td>
-<td>3</td>
-<td>4</td>
-<td>5</td>
-<td>6</td>
-<td>7</td>
-</tr>
-<tr>
-<td>7</td>
-<td>8</td>
-<td>9</td>
-<td>10</td>
-<td>11</td>
-<td>12</td>
-<td>13</td>
-<td>14</td>
-</tr>
-<tr>
-<td>14</td>
-<td>15</td>
-<td>16</td>
-<td>17</td>
-<td>18</td>
-<td>19</td>
-<td>20</td>
-<td>21</td>
-</tr>
-<tr>
-<td>21</td>
-<td>22</td>
-<td>23</td>
-<td>24</td>
-<td>25</td>
-<td>26</td>
-<td>27</td>
-<td>28</td>
-</tr>
-<tr>
-<td>28</td>
-<td>29</td>
-<td>30</td>
-<td>31</td>
-<td>32</td>
-<td>33</td>
-<td>34</td>
-<td>35</td>
-</tr>
-<tr>
-<td>35</td>
-<td>36</td>
-<td>37</td>
-<td>38</td>
-<td>39</td>
-<td>40</td>
-<td>41</td>
-<td>42</td>
-</tr>
-<tr>
-<td>42</td>
-<td>43</td>
-<td>44</td>
-<td>45</td>
-<td>46</td>
-<td>47</td>
-<td>48</td>
-<td>49</td>
-</tr>
-<tr>
-<td>49</td>
-<td>50</td>
-<td>51</td>
-<td>52</td>
-<td>53</td>
-<td>54</td>
-<td>55</td>
-<td>56</td>
-</tr>
-<tr>
-<td>56</td>
-<td>57</td>
-<td>58</td>
-<td>59</td>
-<td>60</td>
-<td>61</td>
-<td>62</td>
-<td>63</td>
-</tr>
-</tbody></table>
-<p>可以看到这样也可以均匀随机的生成[1,63]的随机数，则可以得到这样的一个规律：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="REASONML"><figure class="iseeu highlight /reasonml"><table><tr><td class="code"><pre><span class="line">已知 rand<span class="constructor">_N()</span> 可以等概率的生成<span class="literal">[<span class="number">1</span>, N]</span>范围的随机数</span><br><span class="line">那么：</span><br><span class="line">(rand<span class="constructor">_X()</span> - <span class="number">1</span>) × Y + rand<span class="constructor">_Y()</span> ==&gt; 可以等概率的生成<span class="literal">[<span class="number">1</span>, X <span class="operator">*</span> Y]</span>范围的随机数</span><br><span class="line">即实现了 rand_X*<span class="constructor">Y()</span></span><br></pre></td></tr></table></figure></div>
+<h3 id="Processor"><a href="#Processor" class="headerlink" title="Processor"></a>Processor</h3><h4 id="BeanFactoryPostProcessor"><a href="#BeanFactoryPostProcessor" class="headerlink" title="BeanFactoryPostProcessor"></a>BeanFactoryPostProcessor</h4><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.demo.processor;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.BeansException;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.BeanDefinition;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.BeanFactoryPostProcessor;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.ConfigurableListableBeanFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBeanFactoryPostProcessor</span> <span class="keyword">implements</span> <span class="title">BeanFactoryPostProcessor</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">MyBeanFactoryPostProcessor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">super</span>();</span><br><span class="line">		System.out.println(<span class="string">&quot;BeanFactoryPostProcessor类构造方法&quot;</span>);</span><br><span class="line">		System.out.println(<span class="string">&quot;---------&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 在ApplicationContext内部的BeanFactory加载完bean的定义后，但是在对应的bean实例化之前进行回调。</span></span><br><span class="line"><span class="comment">	 * 可以通过实现该接口来对实例化之前的bean定义进行修改。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postProcessBeanFactory</span><span class="params">(ConfigurableListableBeanFactory beanFactory)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[BeanFactoryPostProcessor接口]postProcessBeanFactory方法在加载完bean的定义后，在bean实例化前进行修改&quot;</span>);</span><br><span class="line">		<span class="comment">//获取bean的定义</span></span><br><span class="line">		BeanDefinition bd = beanFactory.getBeanDefinition(<span class="string">&quot;person&quot;</span>);</span><br><span class="line">		StringBuilder sb = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">		sb</span><br><span class="line">				.append(<span class="string">&quot;beanName: person&quot;</span>)</span><br><span class="line">				.append(<span class="string">&quot;,beanClassName: &quot;</span>).append(bd.getBeanClassName())</span><br><span class="line">				.append(<span class="string">&quot;,factoryBeanName: &quot;</span>).append(bd.getFactoryBeanName())</span><br><span class="line">				.append(<span class="string">&quot;,factoryMethodName: &quot;</span>).append(bd.getFactoryMethodName())</span><br><span class="line">				.append(<span class="string">&quot;,scope: &quot;</span>).append(bd.getScope())</span><br><span class="line">				.append(<span class="string">&quot;,parent: &quot;</span>).append(bd.getParentName())</span><br><span class="line">				.append(<span class="string">&quot;,nameValues: &quot;</span>).append(bd.getPropertyValues().get(<span class="string">&quot;name&quot;</span>))</span><br><span class="line">				.append(<span class="string">&quot;,ageValues: &quot;</span>).append(bd.getPropertyValues().get(<span class="string">&quot;age&quot;</span>));</span><br><span class="line">		System.out.println(<span class="string">&quot;该定义bean的信息为：&quot;</span>);</span><br><span class="line">		System.out.println(sb.toString());</span><br><span class="line">		System.out.println(<span class="string">&quot;---------&quot;</span>);</span><br><span class="line">		bd.getPropertyValues().addPropertyValue(<span class="string">&quot;name&quot;</span>,<span class="string">&quot;jason&quot;</span>);</span><br><span class="line">		bd.getPropertyValues().addPropertyValue(<span class="string">&quot;age&quot;</span>,<span class="string">&quot;21&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
-<p>公式：<br>$$<br>(rand_X() - 1) × Y + rand_Y() \Rightarrow 可以等概率的生成[1, X * Y]范围的随机数<br>$$</p>
-<h2 id="LC题目-优化"><a href="#LC题目-优化" class="headerlink" title="LC题目+优化"></a>LC题目+优化</h2><h3 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h3><p>再来看看Leetcode上的这一题：<a href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/">470. 用 Rand7() 实现 Rand10()</a></p>
-<p>要实现rand10()，就需要先实现<code>rand_N()</code>，并且保证N大于10且是10的倍数。这样再通过<code>rand_N() % 10 + 1</code> 就可以得到[1,10]范围的随机数了。</p>
-<p>rand_N()的实现方法可以通过上面推导出来的规律得到：</p>
-<p><code>(rand7()-1) × 7 + rand7()  ==&gt; rand49()</code></p>
-<p>但是这样实现的N不是10的倍数，这该怎么处理？这里就涉及到了“<strong>拒绝采样</strong>”的知识了，也就是说，如果某个采样结果不在要求的范围内，则丢弃它。基于上面的这些分析，再回头看下面的代码，想必是不难理解了。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> num = (rand7() - <span class="number">1</span>) * <span class="number">7</span> + rand7(); <span class="comment">// 等概率生成[1,49]范围的随机数</span></span><br><span class="line">            <span class="keyword">if</span>(num &lt;= <span class="number">40</span>) <span class="keyword">return</span> num % <span class="number">10</span> + <span class="number">1</span>; <span class="comment">// 拒绝采样，并返回[1,10]范围的随机数</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+<h4 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h4><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.demo.processor;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.BeansException;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.BeanPostProcessor;</span><br><span class="line"></span><br><span class="line"><span class="comment">//后置处理器，在 bean 实例化完成、属性注入完成之后，会执行回调方法</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBeanPostProcessor</span> <span class="keyword">implements</span> <span class="title">BeanPostProcessor</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">MyBeanPostProcessor</span><span class="params">()</span></span>&#123;</span><br><span class="line">		<span class="keyword">super</span>();</span><br><span class="line">		System.out.println(<span class="string">&quot;BeanPostProcessor类构造器&quot;</span>);</span><br><span class="line">		System.out.println(<span class="string">&quot;----------&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//实例化、依赖注入完毕，在调用显示的初始化之前完成一些定制的初始化任务</span></span><br><span class="line">	<span class="comment">//返回值会作为新的bean实例，所以不要随便返回null</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Object <span class="title">postProcessBeforeInitialization</span><span class="params">(Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[BeanPostProcessor接口]postProcessBeforeInitialization执行初始化前任务&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> bean;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//实例化、依赖注入、初始化完毕时执行</span></span><br><span class="line">	<span class="comment">//返回值会作为新的bean实例，所以不要随便返回null</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Object <span class="title">postProcessAfterInitialization</span><span class="params">(Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[BeanPostProcessor接口]postProcessAfterInitialization执行初始化完成后任务&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> bean;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
-<h3 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h3><p>根据上面的分析，我们已经知道<code>(rand7() - 1) * 7 + rand7()</code> 等概率生成<code>[1,49]</code>范围的随机数。而由于我们需要的是10的倍数，因此，需要舍弃掉<code>[41, 49]</code>这9个数。优化的点就始于——我们能否利用这些范围外的数字，以减少丢弃的值，提高命中率总而提高随机数生成效率。</p>
-<p>当生成的随机数x在<code>[41,49]</code>时，我们拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,9]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,63]</code>的随机数，若这次生成的随机数在<code>[61,63]</code>时，我们也拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,3]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,21]</code>的随机数，若这次生成的随机数为21，则我们拒绝采样21，但是舍弃的21只能得到1这一个随机数，没有用处，所以我们只能重新生成<code>[1,49]</code>的随机数。代码如下：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            <span class="keyword">int</span> a = (rand7()-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            <span class="keyword">int</span> b = rand7();</span><br><span class="line">            <span class="keyword">int</span> num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">40</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">40</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">60</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">60</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">20</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+<h4 id="InstantiationAwareBeanPostProcessor"><a href="#InstantiationAwareBeanPostProcessor" class="headerlink" title="InstantiationAwareBeanPostProcessor"></a>InstantiationAwareBeanPostProcessor</h4><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.demo.processor;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.BeansException;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.PropertyValues;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//InstantiationAwareBeanPostProcessor是感知Bean实例化的处理器</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyInstantiationAwareBeanPostProcessor</span> <span class="keyword">implements</span> <span class="title">InstantiationAwareBeanPostProcessor</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">MyInstantiationAwareBeanPostProcessor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">super</span>();</span><br><span class="line">		System.out.println(<span class="string">&quot;InstantiationAwareBeanPostProcessor类构造器&quot;</span>);</span><br><span class="line">		System.out.println(<span class="string">&quot;-----------&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//bean实例化之前调用</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Object <span class="title">postProcessBeforeInstantiation</span><span class="params">(Class&lt;?&gt; beanClass, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[InstantiationAwareBeanPostProcessor接口]postProcessBeforeInstantiation在bean实例化前执行，此时没有bean对象&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//bean实例化之后调用</span></span><br><span class="line">	<span class="comment">//其返回值决定要不要调用postProcessPropertyValues方法的其中一个因素</span></span><br><span class="line">	<span class="comment">//返回true则会调用postProcessProperties进行属性值修改</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">postProcessAfterInstantiation</span><span class="params">(Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;[InstantiationAwareBeanPostProcessor接口]postProcessAfterInstantiation在bean实例化后执行，此时有bean对象&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> PropertyValues <span class="title">postProcessProperties</span><span class="params">(PropertyValues pvs, Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;假装postProcessProperties执行修改&quot;</span>);</span><br><span class="line">		System.out.println(<span class="string">&quot;---------&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> pvs;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
 
-<p>执行效率也比上面快了许多</p>
-<p><img data-src="/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/image-20210905123421344.png" alt="image-20210905123421344"></p>
-<p>保留的数字范围可以通过下面这个公式得到：</p>
-<p>假设有<code>rand_X</code>，想得到<code>rand_Y</code>，<br><code>a = (rand_X()-1)*Y</code>，<code>b = rand_X()</code>;<br>则保留范围为：<br>$$<br>[1,Y*((a+b)_{max}/Y)]<br>$$<br>返回的数字为：<br>$$<br>(a+b)\pmod Y + 1<br>$$<br>参考题解链接：<a href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/solution/cong-zui-ji-chu-de-jiang-qi-ru-he-zuo-dao-jun-yun-/">从最基础的讲起如何做到均匀的生成随机数</a></p>
-]]></content>
-      <categories>
-        <category>JAVA</category>
-      </categories>
-      <tags>
-        <tag>JAVA</tag>
-        <tag>算法</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Mysql慢查询——查询优化</title>
-    <url>/Mysql%E6%85%A2%E6%9F%A5%E8%AF%A2%E2%80%94%E2%80%94%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</url>
-    <content><![CDATA[<p>在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：<code>对于SQL查询慢的问题你要怎么去发现和解决</code>。最初我也大概只能回答个索引相关的，比如”通过EXPLAIN查看查询的访问类型和一些查询情况”， “查看是否可以在某些表的字段增加索引然后改写查询语句”等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这篇文章便是我针对这本书第六章内容的一些整理总结(其实就是相当于摘抄吧 :triumph: )。方便自己记忆的同时也放到博客上来给博客更新一下(其实是都放到本地没怎么上传到博客，属于是懒:dog:了)</p>
-<span id="more"></span>
+<h3 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="XML"><figure class="iseeu highlight /xml"><table><tr><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">&quot;http://www.springframework.org/schema/beans&quot;</span></span></span><br><span class="line"><span class="tag">	   <span class="attr">xmlns:xsi</span>=<span class="string">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span> <span class="attr">xmlns:p</span>=<span class="string">&quot;http://www.springframework.org/schema/p&quot;</span></span></span><br><span class="line"><span class="tag">	   <span class="attr">xsi:schemaLocation</span>=<span class="string">&quot;http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="string"><span class="tag">        https://www.springframework.org/schema/beans/spring-beans.xsd&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line">	<span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">&quot;beanPostProcessor&quot;</span> <span class="attr">class</span>=<span class="string">&quot;com.demo.processor.MyBeanPostProcessor&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">	<span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">&quot;instantiationAwareBeanPostProcessor&quot;</span> <span class="attr">class</span>=<span class="string">&quot;com.demo.processor.MyInstantiationAwareBeanPostProcessor&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">	<span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">&quot;beanFactoryPostProcessor&quot;</span> <span class="attr">class</span>=<span class="string">&quot;com.demo.processor.MyBeanFactoryPostProcessor&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">	<span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">&quot;person&quot;</span> <span class="attr">class</span>=<span class="string">&quot;com.demo.pojo.Person&quot;</span> <span class="attr">init-method</span>=<span class="string">&quot;myInit&quot;</span></span></span><br><span class="line"><span class="tag">		<span class="attr">destroy-method</span>=<span class="string">&quot;myDestroy&quot;</span> <span class="attr">scope</span>=<span class="string">&quot;singleton&quot;</span></span></span><br><span class="line"><span class="tag">		  <span class="attr">p:name</span> = <span class="string">&quot;john&quot;</span> <span class="attr">p:age</span> = <span class="string">&quot;22&quot;</span></span></span><br><span class="line"><span class="tag">	/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
 
-<h2 id="为什么查询慢"><a href="#为什么查询慢" class="headerlink" title="为什么查询慢"></a>为什么查询慢</h2><p>​    在我们看待这个问题的时候，我们就要想：是什么造成SQL的查询慢呢，通过对索引的学习我们也知道索引对于高性能的重要性，但光有索引也是不够的，查询语句的合理性也是要考虑的，如果一个查询语句写的很烂，即使我们的表结构和索引设计的再好，那也是无济于事的。</p>
-<p>​    查询的生命周期大致可以这么来看：客户端发送请求到服务器:point_right:服务器进行解析:point_right:生成执行计划:point_right:<strong>执行</strong>:point_right:返回结果给客户端。一个查询会在一个生命周期内涉及到这些个任务，而每个任务的完成时间也是不同的。我们可以针对这么一个大概的生命周期概念，来对我们的查询进行一个优化。</p>
-<h2 id="优化查询访问"><a href="#优化查询访问" class="headerlink" title="优化查询访问"></a>优化查询访问</h2><p>​    查询性能低一个最基本的原因是我们访问的数据太多，针对查询数据多这一问题，我们可以看看是否有存在这么两个问题：<code>是否查询了很多我们不需要的数据</code>；<code>MySQL的服务器是否在分析大量超过我们需要的数据</code>。</p>
-<h3 id="是否查询了很多不需要的数据"><a href="#是否查询了很多不需要的数据" class="headerlink" title="是否查询了很多不需要的数据"></a>是否查询了很多不需要的数据</h3><p>​    我们通常会认为MySQL返回的是我们需要的数据，但实际上MySQL是<strong>先返回全部的结果集再进行计算</strong>，所以我们有时候要考虑我们是否真的需要这么多数据呢，就好像我们要让一个页面显示10条数据，我们就要先查个100条数据然后再选前10条展示吗，显而易见是不用的，我们加个 limit 即可。</p>
-<p>​    对于<code>select *</code>的写法我们也要在使用的时候去想我们是否真的需要去使用它呢，对于一些开发者来说，在知道其性能影响的情况下，这样的写法可以简易开发和做到代码复用，是值得考虑的。<code>select *</code>会使得优化器无法完成<strong>索引覆盖扫描</strong>这类的优化，也会给服务器带来额外的IO、内存和CPU的消耗，在不需要<code>select *</code>的时候它便会给我们造成本没有的性能影响了。</p>
-<p>​    也有这么一种容易发生的情况，就是我们多次重复执行了相同的执行并且返回相同的数据，对于这样的数据，我们可以在第一次查询该数据时将其缓存起来，这样后面再需要时直接从缓存中获取即可。</p>
-<h3 id="MySQL是否分析扫描额外的数据"><a href="#MySQL是否分析扫描额外的数据" class="headerlink" title="MySQL是否分析扫描额外的数据"></a>MySQL是否分析扫描额外的数据</h3><p>​    当我们确认我们查询返回的确实是我们需要的数据后，我们就应该看看查询为了返回结果是否扫描了过多的数据。通常简单的衡量查询开销的指标是：<code>响应时间</code>,<code>扫描行数</code>,<code>返回行数</code>，这三个指标都记录在了MySQL的<strong>慢日志</strong>中，所以<strong>检查慢日志记录是扫描行数过多的查询的好办法</strong>。</p>
-<p>​    如果我们的查询扫描了大量的数据却只返回很少的行，可以考虑如下的优化方式：</p>
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.demo;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.demo.pojo.Person;</span><br><span class="line"><span class="keyword">import</span> com.demo.service.TestHelloService;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;----开始初始化容器----&quot;</span>);</span><br><span class="line">		ApplicationContext ctx = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">&quot;classpath:spring-config.xml&quot;</span>);</span><br><span class="line">		System.out.println(<span class="string">&quot;----初始化容器成功----&quot;</span>);</span><br><span class="line">		System.out.println(<span class="string">&quot;获取bean&quot;</span>);</span><br><span class="line">		Person person = ctx.getBean(<span class="string">&quot;person&quot;</span>, Person.class);</span><br><span class="line">		System.out.println(person);</span><br><span class="line">		System.out.println(<span class="string">&quot;----开始关闭容器----&quot;</span>);</span><br><span class="line">		((ClassPathXmlApplicationContext)ctx).registerShutdownHook();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="结果"><a href="#结果" class="headerlink" title="结果"></a>结果</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="SHELL"><figure class="iseeu highlight /shell"><table><tr><td class="code"><pre><span class="line">----开始初始化容器----</span><br><span class="line">BeanFactoryPostProcessor类构造方法</span><br><span class="line">---------</span><br><span class="line">[BeanFactoryPostProcessor接口]postProcessBeanFactory方法在加载完bean的定义后，在bean实例化前进行修改</span><br><span class="line">该定义bean的信息为：</span><br><span class="line">beanName: person,beanClassName: com.demo.pojo.Person,factoryBeanName: null,factoryMethodName: null,scope: singleton,parent: null,nameValues: john,ageValues: 22</span><br><span class="line">---------</span><br><span class="line">BeanPostProcessor类构造器</span><br><span class="line">----------</span><br><span class="line">InstantiationAwareBeanPostProcessor类构造器</span><br><span class="line">-----------</span><br><span class="line">[InstantiationAwareBeanPostProcessor接口]postProcessBeforeInstantiation在bean实例化前执行，此时没有bean对象</span><br><span class="line">[构造器]调用Person的构造器实例化一个Person对象</span><br><span class="line">[InstantiationAwareBeanPostProcessor接口]postProcessAfterInstantiation在bean实例化后执行，此时有bean对象</span><br><span class="line">假装postProcessProperties执行修改</span><br><span class="line">---------</span><br><span class="line">注入属性age,值为21</span><br><span class="line">注入属性name,值为jason</span><br><span class="line">[BeanNameAware接口]调用BeanNameAware.setBeanName()方法</span><br><span class="line">[BeanFactoryAware接口]调用BeanFactoryAware.setBeanFactory()方法</span><br><span class="line">[BeanPostProcessor接口]postProcessBeforeInitialization执行初始化前任务</span><br><span class="line">属性设置完后[InitializingBean接口]调用InitializingBean.afterPropertiesSet()方法</span><br><span class="line">[init-method]调用&lt;bean&gt;的init-method属性指定的初始化方法</span><br><span class="line">[BeanPostProcessor接口]postProcessAfterInitialization执行初始化完成后任务</span><br><span class="line">----初始化容器成功----</span><br><span class="line">获取bean</span><br><span class="line">Person&#123;name=&#x27;jason&#x27;, age=21&#125;</span><br><span class="line">----开始关闭容器----</span><br><span class="line">要销毁bean时[DisposableBean接口]调用DisposableBean.destroy()</span><br><span class="line">[destroy-method]调用&lt;bean&gt;的destroy-method属性指定的初始化方法</span><br></pre></td></tr></table></figure></div>
+
+<p>​    通过打印语句就能很直观地看到这个过程：容器初始化后先构造<strong>BeanFactoryPostProcessor</strong>，然后调用其postProcessBeanFactory方法，获取bean的定义。接着构造<strong>BeanPostProcessor</strong>和<strong>InstantiationAwareBeanPostProcessor</strong>。到这里都还是没有bean对象的，在实例化bean之前就会调用InstantiationAwareBeanPostProcessor接口的postProcess<strong>BeforeInstantiation</strong>方法，接着实例化bean，实例化之后调用InstantiationAwareBeanPostProcessor接口的postProcess<strong>AfterInstantiation</strong>方法，这个方法返回值如果是true的话就会触发postProcessProperties的调用。bean实例化好后，就对其属性进行注入，对于实现的Aware接口调用对应的set方法。这样bean的实例化和属性设置就完成了，接下来就是要初始化，在初始化前，BeanPostProcessor会执行postProcess<strong>BeforeInitialization</strong>这一方法，然后就是初始化的操作，检查到实现了<strong>InitializingBean</strong>接口和有配置<strong>init-method</strong>，执行InitializingBean.<strong>afterPropertiesSet</strong>()方法和&lt;bean&gt;的init-method属性指定的初始化方法，初始化完成后BeanPostProcessor就会执行postProcess<strong>AfterInitialization</strong>这一方法，容器的初始化也就完成了，接着的就是模拟一下获取bean的操作。关闭容器时，检查到实现了<strong>DisposableBean</strong>接口和配置了<strong>destroy-method</strong>，执行DisposableBean.<strong>destroy</strong>()方法和&lt;bean&gt;的destroy-method属性指定的销毁后的回调方法。</p>
+<p>​    这便是一个简单的bean生命周期过程了。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><blockquote>
 <ul>
-<li>使用<strong>索引覆盖扫描</strong>，使存储引擎不需要回表即可返回结果</li>
-<li>改变库表结构</li>
-<li>重写这个复杂查询</li>
+<li><a href="https://juejin.cn/post/6844903694039793672">https://juejin.cn/post/6844903694039793672</a></li>
+<li><a href="https://javaguide.cn/system-design/framework/spring/spring-knowledge-and-questions-summary.html#bean-%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F">https://javaguide.cn/system-design/framework/spring/spring-knowledge-and-questions-summary.html#bean-%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F</a></li>
+<li><a href="https://www.cnblogs.com/zrtqsk/p/3735273.html">https://www.cnblogs.com/zrtqsk/p/3735273.html</a></li>
+<li><a href="https://cloud.tencent.com/developer/article/1409315">https://cloud.tencent.com/developer/article/1409315</a></li>
+<li><a href="https://developer.aliyun.com/article/459773">https://developer.aliyun.com/article/459773</a></li>
+<li><a href="https://cloud.tencent.com/developer/article/1409273">https://cloud.tencent.com/developer/article/1409273</a></li>
 </ul>
-<h2 id="重构查询方式"><a href="#重构查询方式" class="headerlink" title="重构查询方式"></a>重构查询方式</h2><p>​    如果我们的查询的列确实是需要的，索引的设计和库表的设计也没什么问题的时候，那么就可以考虑下更改我们的查询方式。对于一个大查询，我们可以考虑对它进行<code>分而治之</code>的方法来进行多个小查询。对于一些关联查询，我们也考虑是不是能对它进行<strong>分解</strong>，就像书上的例子那样：</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png" alt="image-20220817170821072"></p>
-<p>​    这样可以让缓存的效率更高，因为有缓存，我们可能可以跳过某条查询或者减少IN()里的内容。也可以减少了锁的竞争。这样的查询也可能能提升查询效率，<code>IN()</code>让MySQL按照ID顺序进行查询，顺序IO是要比随机IO高效的。这样还可以减少冗余记录的查询，在数据库上关联查询我们就可能需要重复访问同一数据，在应用层上进行关联让我们可以对某条数据只查询一次，减少了网络和内存的消耗。</p>
-<p>上面所讲的是针对查询的访问和方式，但如果知道MySQL如何优化和执行查询时，那我们在优化查询时便可以按照一些原则让优化器能按我们设想的方向运行。下面这张图是发送一个请求时MySQL所做的事情：</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817172702465.png" alt="image-20220817172702465"></p>
-<p>图中的<code>查询缓存</code>在MySQL8已经是关闭的了，《高性能MySQL》所基于的版本还是5版本的，所以如果是8版本或以上的是可以忽略掉查询缓存的。书上在<code>查询优化</code>做了很多的篇幅进行讲解，讲了很多优化器在一些查询上的优化细节和做法，这部分如果放上来记录的话篇幅还是挺长的，多到我也不知道怎么整理写上了比较好，所以第六章的查询优化处理这块还是很建议大家去阅读原书的，在这里我就先不写着了。</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​    一个高性能的查询，需要好的库表设计、索引设计、查询语句设计和查询的优化方式，而查询的优化设计又是很多细节的，所以当SQL查询慢的原因是由于我们查询语句设计不妥当时，便可以照着该书籍第六章的方法去进行优化。</p>
-<p>​    通过网上资料的搜索SQL查询慢的原因也可能不在于查询语句的问题，比如网络不好的情况下，客户端和服务端之间的连接和传输受到影响、IO吞吐量小、缓存不够、出现死锁等等，硬件软件都会或多或少的影响到查询，还是要针对特定的原因去寻找对应的解决办法的。对于我个人来说，排插SQL查询慢的基本方向是通过查询<strong>慢日志</strong>来定位慢查询SQL，然后通过<strong>explain</strong>命令去分析该SQL的执行计划后进行相应的优化，如果优化完还是查询慢或者没有什么优化方向后，就再去考虑网络、内存、服务器和应用程序设计上的问题。</p>
+</blockquote>
 ]]></content>
       <categories>
-        <category>MySQL</category>
+        <category>Java</category>
+        <category>Spring</category>
       </categories>
       <tags>
-        <tag>MySQL</tag>
+        <tag>Java</tag>
+        <tag>Spring</tag>
       </tags>
   </entry>
   <entry>
-    <title>在文章中添加图片</title>
-    <url>/TestPage/</url>
-    <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
-<p>贴张图片测试一下能不能成功显示出来：👇</p>
-<p><img data-src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
+    <title>买卖股票问题</title>
+    <url>/%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8%E9%97%AE%E9%A2%98/</url>
+    <content><![CDATA[<p>​    今天重新写了些动态规划和贪心的题目，买卖股票的问题在这两个方面还是挺经典的。买卖股票在力扣上有四种题目，难度也是有涉及到简单、中等和困难。既然写了那么多次这几道题目，索性就水一篇文章来总结下买卖股票题的做法吧</p>
 <span id="more"></span>
 
-<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
-
-<p>修改<code>站点配置文件</code></p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-<p>这样在创建文章时，会同样生成一个同名文件夹</p>
-<p><img data-src="/TestPage/image-20210507150008908.png" alt="实例"></p>
-<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
-<p><img data-src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
-<p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p>
-<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>test</tag>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Hello World</title>
-    <url>/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<span id="more"></span>
-
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
-]]></content>
-  </entry>
-  <entry>
-    <title>在文章中添加更新时间</title>
-    <url>/makeUpdTime/</url>
-    <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。</p>
-<span id="more"></span>
-
-<h2 id="初始方法-不需要"><a href="#初始方法-不需要" class="headerlink" title="初始方法(不需要)"></a>初始方法(不需要)</h2><p><del>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</del></p>
-<p><img data-src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
-<p><del>代码如下：</del></p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="HTML"><figure class="iseeu highlight /html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
-
-<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
-
-<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-
-
-<p>这样更新时间就能显示出来了。</p>
-<p><img data-src="/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
-<hr>
-<h2 id="现方法"><a href="#现方法" class="headerlink" title="现方法"></a>现方法</h2><p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
-<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-
-<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
-
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>代码块Mac风格</title>
-    <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
-    <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
-<p><img data-src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508161438627.png" alt="image-20210508161438627"></p>
-<span id="more"></span>
-
-<p>通过 <a href="https://miaosakurai.com/">樱井喵</a> 的这一篇 <a href="https://miaosakurai.com/2020/04/20/Hexo-NexT%E7%BE%8E%E5%8C%96%F0%9F%8D%95Mac-Panel%E9%A3%8E%E6%A0%BC%E4%BB%A3%E7%A0%81%E5%9D%97%E9%85%8D%E7%BD%AE/">博客</a> ，直接在 <code>主题配置文件</code>配置一下 <code>codeblock.copy_button.style: mac</code>就行了</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">copy_button:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">show_result:</span> <span class="literal">true</span></span><br><span class="line">    <span class="comment"># Available values: default | flat | mac</span></span><br><span class="line">    <span class="attr">style:</span> <span class="string">mac</span></span><br></pre></td></tr></table></figure></div>
-
-<p>要实现上面代码块的样式，我们可以在<code>站点目录\node_modules\highlight.js\styles</code>里发现有许多中css样式(tomorrow-theme也在其中)</p>
-<p><img data-src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508160824026.png" alt="image-20210508160824026"></p>
-<p>我们找到<code>主题配置文件</code>中的theme，把light和dark都改成上述文件夹里的某种样式就行了，我用的是tomorrow-night-bright，也就是本文代码块的样式。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">theme:</span></span><br><span class="line">    <span class="attr">light:</span> <span class="string">tomorrow-night-bright</span></span><br><span class="line">    <span class="attr">dark:</span> <span class="string">tomorrow-night-bright</span></span><br></pre></td></tr></table></figure></div>
-
-<p>不过这种会对小代码块也同样生效，暂时我还没找到方法，等待后面找到了我再进行一波更新。</p>
-<p>在报错中我也找到了一个highlight.js的地址：<code>站点目录\themes\next\scripts\events\lib\highlight.js</code></p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-        <tag>代码块</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建分支存储源文件</title>
-    <url>/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/</url>
-    <content><![CDATA[<p>为了防止日后出现换电脑的情况而导致自己的配置文件和一些文档消失，所以创建一个分支存放源文件是有必要的，当然你也可以选择存放到云盘，只要你记得更新就是了。创建分支存放的方法其实也不是很复杂。</p>
-<span id="more"></span>
-
-<h2 id="初始化版本库并与远程仓库关联"><a href="#初始化版本库并与远程仓库关联" class="headerlink" title="初始化版本库并与远程仓库关联"></a>初始化版本库并与远程仓库关联</h2><p>一般按照网上方法所创建的博客是没有与远程仓库建立关联的，通过几个git命令来进行关联。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">//将你的本地文件夹初始化成一个版本库</span><br><span class="line">git init</span><br><span class="line"></span><br><span class="line">//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin</span><br><span class="line">git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></span><br></pre></td></tr></table></figure></div>
-
-<h2 id="创建并切换分支，提交文件"><a href="#创建并切换分支，提交文件" class="headerlink" title="创建并切换分支，提交文件"></a>创建并切换分支，提交文件</h2><p>创建并切换分支：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">git checkout -b <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
-
-<p>提交文件：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">git add .</span><br><span class="line"></span><br><span class="line">git commit -m<span class="string">&quot;源文件&quot;</span></span><br><span class="line"></span><br><span class="line">git push origin <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
-
-<h2 id="在GitHub中更改新分支为默认分支"><a href="#在GitHub中更改新分支为默认分支" class="headerlink" title="在GitHub中更改新分支为默认分支"></a>在GitHub中更改新分支为默认分支</h2><p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
-<p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
-<p><img data-src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
-<p>选中新创分支并点击Update</p>
-<p><img data-src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
-<p>它会弹出一个红色的经过，直接sure就行了。</p>
-<h2 id="后续日常管理操作"><a href="#后续日常管理操作" class="headerlink" title="后续日常管理操作"></a>后续日常管理操作</h2><p>只要你的<code>站点配置文件</code>里deploy的branch是master，在你执行<code>hexo g -d</code>后也同样会更新。在你进行了文章添加修改或修改样式等改动后，通过下面流程进行管理：</p>
-<ol>
-<li>依次执行<code>git add .</code> 、<code>git commit -m&quot;xxx&quot;</code>、<code>git push origin 新创分支名</code>推送到GitHub(注意此时当前分支是你新创的分支)。</li>
-<li>执行<code>hexo g -d</code>发布网站到master分支上</li>
-</ol>
-<p>建议不要调转这两者的顺序</p>
-<h2 id="在其他电脑修改博客"><a href="#在其他电脑修改博客" class="headerlink" title="在其他电脑修改博客"></a>在其他电脑修改博客</h2><p>通过git clone将仓库拉下来(默认分支为你当时新创的分支)</p>
-<p>然后在你copy下来的仓库文件夹通过git bash执行一下指令：<code>npm install hexo</code>、<code>npm install</code>、<code>npm install hexo-deployer-git</code>（不需要<code>hexo init</code>）。</p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>浅谈虚拟内存</title>
-    <url>/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/</url>
-    <content><![CDATA[<p>​    关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。</p>
-<span id="more"></span>
-
-<h2 id="何为虚拟内存"><a href="#何为虚拟内存" class="headerlink" title="何为虚拟内存"></a>何为虚拟内存</h2><p>​    如果我们所有操作都直接去操作到物理内存的话很容易出现问题，当太多的进程需要太多的内存时，会因为内存的不足而导致部分进程无法运行。而且由于都是操作一块物理内存，很容易有一个进程写了另一个进程使用的内存造成问题，不好管理。所以为了更好地对内存进行管理，就有了虚拟内存。</p>
-<p>​    虚拟内存是对主存的一个抽象，我个人的理解来说，虚拟内存是磁盘里某个部分的映射，也就是虚拟内存其实是磁盘里某块连续的空间来的。虚拟内存的好处如下：</p>
+<h2 id="买卖股票的最佳时机"><a href="#买卖股票的最佳时机" class="headerlink" title="买卖股票的最佳时机"></a>买卖股票的最佳时机</h2><p>题目连接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/">买卖股票的最佳时机</a></p>
+<p>描述：</p>
 <blockquote>
-<ul>
-<li>把主存当作是一个存储在磁盘上的地址空间的<strong>高速缓存</strong>，虚拟内存维护的是磁盘里面的数据，而这些数据在需要时会从磁盘缓存到主存中，让进程认为自己拥有这么一块主存空间，而主存存储一些活动区域，进程的部分代码可以缓存在其中，大大地<strong>提高了主存的利用率</strong>。</li>
-<li>虚拟内存为每个进程都提供了一致的地址空间，每个进程都有自己的私有区域和共享区域，即<strong>方便了内存的管理</strong>，也<strong>保护了每个进程的地址空间不被其他进程破坏</strong>。</li>
-</ul>
+<p>给定一个数组 prices ，它的第 i 个元素 prices[i] 表示一支给定股票第 i 天的价格。</p>
+<p>你只能选择 某一天 买入这只股票，并选择在 未来的某一个不同的日子 卖出该股票。设计一个算法来计算你所能获取的最大利润。</p>
+<p>返回你可以从这笔交易中获取的最大利润。如果你不能获取任何利润，返回 0 。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="ACCESSLOG"><figure class="iseeu highlight /accesslog"><table><tr><td class="code"><pre><span class="line">输入：<span class="string">[7,1,5,3,6,4]</span></span><br><span class="line">输出：<span class="number">5</span></span><br></pre></td></tr></table></figure></div>
 </blockquote>
-<h2 id="虚拟内存结构"><a href="#虚拟内存结构" class="headerlink" title="虚拟内存结构"></a>虚拟内存结构</h2><p>​    CSAPP中有这么一张图描绘了Linux下虚拟内存的结构：</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png" alt="image-20220821174738227"></p>
-<p>​    图中可以看到虚拟内存的结构就是一个<code>[内核虚拟内存][进程虚拟内存]</code>。</p>
-<h3 id="内核虚拟内存"><a href="#内核虚拟内存" class="headerlink" title="内核虚拟内存"></a>内核虚拟内存</h3><p>​    内核虚拟内存中又有对于每个进程而言相同和不相同的区域。物理内存和内核代码数据结构对每个进程来说是一样的，这部分区域里有着所映射的所有进程共享的物理页面，还有内核的代码和全局数据结构。另外一部分就是每个进程不同的数据部分，例如每个进程自己的页表、描述了进程任务的<code>task_struct</code>结构、描述了进程使用的虚拟内存情况的<code>mm_struct</code>结构和内核在执行上下文中执行代码时使用的栈。</p>
-<p>​    <code>task_struct</code>是内核为每一个进程维护的一个单独的任务结构，这个结构的元素包含或者指向内核运行该进程所需要的所有信息，例如<strong>进程ID、指向用户栈的指针、可执行目标文件的名字和程序计数器</strong>等。该结构里有一个元素指向了<code>mm_struct</code>，这个结构描述了虚拟内存当前的状态，该结构里我们关注<code>pgd</code>和<code>mmap</code>这两个字段，<code>pgd</code>指向的是一级页表的基址，而<code>mmap</code>指向的是一个描述区域结构<code>vm_area_structs</code> 的链表，这个区域结构描述了当前虚拟地址空间的一个区域。</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png" alt="image-20220821180629323"></p>
-<p>​    <code>vm_prot</code>描述了该区域内的页面读写权限，<code>vm_flags</code>描述了该区域内的页面是私有还是共享的。</p>
-<h3 id="进程虚拟内存"><a href="#进程虚拟内存" class="headerlink" title="进程虚拟内存"></a>进程虚拟内存</h3><p>​    进程虚拟内存从下到上的顺序是<code>.text</code>→<code>.data</code>→<code>.bss</code>→<code>运行时堆</code>→<code>共享库的内存映射区域</code>→<code>用户栈</code>，剩下的一些区域没有虚拟页，内核不记录这些不存在的虚拟页，这些部分也不占用任何的资源。</p>
-<p>​    <code>.text</code>存储的是编译好的代码段。</p>
-<p>​    <code>.data</code>存储的是已经进行了初始化的数据。</p>
-<p>​    <code>.bss</code>存储的是还未进行初始化的数据或者初始化为0的数据，是请求二进制零的，仅是占位符，不占空间。</p>
-<p>​    <strong><code>.text</code>段是只读的</strong>，而**<code>.data</code>和<code>.bss</code>段是可读/写的**。</p>
-<p>​    <code>运行时堆</code>则是运行时创建的一个区域，在C/C++中通常是通过<code>malloc</code>进行分配的，堆主要是存储的是我们运行进程时创建的一些变量对象等内容，内核维护着一个<code>brk</code>指针，指向堆的顶部。</p>
-<p>​    <code>共享库的映射区域</code>存储的就是与当前进程链接的共享对象的映射，概括的说就是动态库、共享内存等。</p>
-<p>​    <code>用户栈</code>则存储的是局部变量和函数调用的上下文等。</p>
-<p>​    如果学过Java的JVM的，对堆和栈都或多或少有印象和认识的，学习了虚拟内存后再去回顾JVM中类加载机制、对象创建和<strong>volatile</strong>变量的底层原理，说不定会有更加深刻的认知和记忆。</p>
-<h2 id="虚拟页"><a href="#虚拟页" class="headerlink" title="虚拟页"></a>虚拟页</h2><p>​    虚拟内存被系统分割成大小固定的块，这些块我们叫做<strong>虚拟页</strong>，物理内存分割的我们类似地称为<strong>物理页</strong>。虚拟页可以分为下面这三种：</p>
+<p>​    作为股票题的第一题很简单，根据题目的描述，由于只进行一次交易，所以只需找到最低价买入，最高价卖出就行了。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span> buy = prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">int</span> profit = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            buy = Math.min(buy,prices[i]);</span><br><span class="line">            profit = Math.max(profit,prices[i]-buy);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> profit;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>​    这题也可以用动态规划的做法来做，只不过上面的贪心算法会更加的快更容易想。这里也写上动态规划的代码</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">2</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">1</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            dp[i][<span class="number">0</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">0</span>],dp[i-<span class="number">1</span>][<span class="number">1</span>]+prices[i]);</span><br><span class="line">            dp[i][<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">1</span>],-prices[i]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">0</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="买卖股票的最佳时机-II"><a href="#买卖股票的最佳时机-II" class="headerlink" title="买卖股票的最佳时机 II"></a>买卖股票的最佳时机 II</h2><p>题目链接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/">买卖股票的最佳时机 II</a></p>
+<p>描述：</p>
 <blockquote>
-<ul>
-<li>已经被分配且缓存在物理内存中的</li>
-<li>已经被分配但是还未缓存在物理内存中的</li>
-<li>还未被分配的。</li>
-</ul>
+<p>给你一个整数数组 prices ，其中 prices[i] 表示某支股票第 i 天的价格。</p>
+<p>在每一天，你可以决定是否购买和/或出售股票。你在任何时候 最多 只能持有 一股 股票。你也可以先购买，然后在 同一天 出售。</p>
+<p>返回 你能获得的 最大 利润 。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="ACCESSLOG"><figure class="iseeu highlight /accesslog"><table><tr><td class="code"><pre><span class="line">输入：prices = <span class="string">[7,1,5,3,6,4]</span></span><br><span class="line">输出：<span class="number">7</span></span><br></pre></td></tr></table></figure></div>
 </blockquote>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png" alt="image-20220821223900550"></p>
-<h3 id="页表"><a href="#页表" class="headerlink" title="页表"></a>页表</h3><p>​    为了判定一个虚拟页是否有缓存在物理内存中，使用到了一个叫做<strong>页表</strong>的结构，虚拟地址空间的每个页都有个在页表的页表项，这个页表项存有这个页面的有效位和其对应的物理地址或者磁盘地址，当有效位为1时，为物理地址，有效位为0时，如果页面已经分配，则为磁盘地址，否则为空地址。</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png" alt="image-20220821233804778"></p>
-<p>​    页面的查找流程通常是这样的：处理器生成一个虚拟地址给CPU里的MMU(内存管理单元)，然后MMU翻译出这个虚拟地址所对应的页表项地址去页表查找，如果对应的页在内存中，则内存向MMU返回对应的页表项，然后MMU得出对应的物理地址后传送到内存中，最后内存返回所请求的数据给处理器。</p>
-<h3 id="缺页"><a href="#缺页" class="headerlink" title="缺页"></a>缺页</h3><p>​    上面是比较理想的情况，也有出现缺页的情况，即对应的物理页不在内存中，这时候就会触发缺页中断，系统由用户态进入到内核态，调用缺页异常处理程序，这个程序会选择一个牺牲页，如果该页面是个脏页面，内核就会把它写回磁盘后释放掉。然后再从磁盘中将对应的页面复制到内存中并更新页表，重新回到引起缺页的指令。而这在磁盘和内存之间传送页的行为称之为<strong>交换</strong>或者<strong>页面调度</strong>。要注意页面没有命中的影响是挺大的。如果调度的页面大小超过了物理内存的大小，就会不断进行页面地换入换出，造成<strong>抖动</strong>，这是很不好的影响。</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png" alt="image-20220821231454373"></p>
-<h3 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h3><p>​    通常我们的页面的大小为<code>4KB</code>，一个页表项的大小为<code>4B</code>，在32位的系统下，就有$$2^{20}$$个页面，这样一个进程的页表就达到了<code>4MB</code>。所以就有了<strong>多级页表</strong>。假设我们有一个二级页表，第一级页表存储的是指向第二级页表的地址，第二级页表存储的是物理地址或者磁盘地址。这样我们就可以用一个<code>4KB</code>的一级页表去管理理论上总共<code>4MB</code>的二级页表，这看起来好像比之前多了，但其实我们往往不会为一个进程分配那么多内存的，而且如果一级页表的某个页表项是空的，则其对应的二级页表也不会存在的，只有在需要时才会创建，我们假设一级页表只有20%的页面在使用，那么所需要的的内存就是$$4KB+4MB*0.2=0.804MB$$，对比起只有单独的页表的<code>4MB</code>，那是节省了巨大的内存。</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png" alt="image-20220821233204041"></p>
-<h3 id="快表TLB"><a href="#快表TLB" class="headerlink" title="快表TLB"></a>快表TLB</h3><p>​    除了多级页表，也有一个<code>TLB</code>，即我们所说的<strong>快表</strong>。根据<strong>局部性原理</strong>，在一段时间内，整个程序的执行仅限于程序中的某一部分。相应地，执行所访问的存储空间也局限于某个内存区域。我们把程序最常访问的页表项存在快表中，且快表是在CPU芯片里的，地址的翻译步骤都在MMU上，如果命中页面的话那速度是非常快的。如果快表没有命中，就会查找常规的页表，然后把查找到的页表项也存储到快表中，这一步可能会覆盖掉某个快表上的条目。</p>
-<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png" alt="image-20220821233649707"></p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><blockquote>
+<p>​    这一题与股票1的差别在于<strong>没有限制最多交易的次数</strong>，即我们可以多次进行买卖，这一题动态规划的做法我觉得是相对比较容易想出来的，定义一个二维数组dp[n][2]，dp[i][0]表示当前不持有股票的最大利润，dp[i][1]表示当前持有股票的最大利润。dp[i][0]可以是之前不持有股票的利润，也可以是把之前的股票在当前卖出后的利润，取它们之间的最大值即可，dp[i][1]可以是之前持有股票的利润，也可以是在之前没有持有股票买入当前股票后的利润，也是取它们之间的最大值即可。就可以得出这么一个状态转移方程：<br>$$<br>dp[i][0]=max(dp[i-1][0],dp[i-1][1]+prices[i])<br>\<br>dp[i][1]=max(dp[i-1][1],dp[i-1][0]-prices[i])<br>$$<br>​    状态方程得出来之后也很容易写出代码：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">2</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">1</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            dp[i][<span class="number">0</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">0</span>],dp[i-<span class="number">1</span>][<span class="number">1</span>]+prices[i]);</span><br><span class="line">            dp[i][<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">1</span>],dp[i-<span class="number">1</span>][<span class="number">0</span>]-prices[i]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">0</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>​    这题也是可以用贪心的做法来做的，我们可以把利润的获取拆分开来，假设我们有1、5、6这三个价格，一眼看上去我们是在价格为1时买入，价格为6时卖出，我们可以把这个过程看成在5的时候价格比1高，我们在5卖出，卖出后再把5作为买入价格，到6的时候价格比5高我们卖出股票，这个过程的利润就可以看成<code>(5-1)+(6-5)</code>，也就是<code>6-1</code>。所以我们只需把每天的正利润累加起来即可得到正确答案。代码如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span> res = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt;n;i++)&#123;</span><br><span class="line">            res += Math.max(prices[i]-prices[i-<span class="number">1</span>],<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="买卖股票的最佳时机-III"><a href="#买卖股票的最佳时机-III" class="headerlink" title="买卖股票的最佳时机 III"></a>买卖股票的最佳时机 III</h2><p>题目链接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iii/">买卖股票的最佳时机 III</a></p>
+<p>描述：</p>
+<blockquote>
+<p>给定一个数组，它的第 i 个元素是一支给定的股票在第 i 天的价格。</p>
+<p>设计一个算法来计算你所能获取的最大利润。你<strong>最多</strong>可以完成 <strong>两笔</strong> 交易。</p>
+<p>注意：你不能同时参与多笔交易（你必须在再次购买前出售掉之前的股票）。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="DNS"><figure class="iseeu highlight /dns"><table><tr><td class="code"><pre><span class="line">输入：prices = [<span class="number">3,3,5,0</span>,<span class="number">0,3,1,4</span>]</span><br><span class="line">输出：<span class="number">6</span></span><br></pre></td></tr></table></figure></div>
+</blockquote>
+<p>​    这道题跟股票II相比区别在于这里限制了交易次数是<strong>最多两次</strong>，也就是我们不能像股票II那样去贪心了，那就使用动态规划的做法来写。因为限制交易次数，状态可以分为：不操作、第一次交易买入、第一次交易卖出、第二次交易买入和第二次交易卖出这五种状态。用二维数组表示的话就是dp[n][5]，其中dp[i][0]代表不操作，dp[i][1]代表在第i天第一次交易中是有买入股票，但要注意不一定是在第i天买的，dp[i][2]代表在第i天第一次交易已卖出，也要注意不一定是在第i天卖出。dp[i][3]和dp[i][4]的意思也跟上面一样，区别在于是代表第二次交易，dp[i][3]的更新会需要有dp[i-1][2]的参与，因为这次的买入后利润是要基于第一次交易完成后的利润来计算的。代码就如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">5</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">1</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">3</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            dp[i][<span class="number">0</span>] = dp[i-<span class="number">1</span>][<span class="number">0</span>];</span><br><span class="line">            dp[i][<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">1</span>],dp[i-<span class="number">1</span>][<span class="number">0</span>]-prices[i]);</span><br><span class="line">            dp[i][<span class="number">2</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">2</span>],dp[i-<span class="number">1</span>][<span class="number">1</span>]+prices[i]);</span><br><span class="line">            dp[i][<span class="number">3</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">3</span>],dp[i-<span class="number">1</span>][<span class="number">2</span>]-prices[i]);</span><br><span class="line">            dp[i][<span class="number">4</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">4</span>],dp[i-<span class="number">1</span>][<span class="number">3</span>]+prices[i]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">4</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>通过代码可以看到dp[i]的状态只依赖于dp[i-1]，那么可以考虑缩减层次，这里可以用四个常量来表示后四种状态，代码如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="comment">//fb表示该天第一次买入股票的最大利润，fs表示该天第一次卖出股票的最大利润</span></span><br><span class="line">        <span class="keyword">int</span> fb = -prices[<span class="number">0</span>],fs = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//sb表示该天第二次买入股票的最大利润，ss表示该天第二次卖出股票的最大利润</span></span><br><span class="line">        <span class="keyword">int</span> sb = -prices[<span class="number">0</span>],ss = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; prices.length;i++)&#123;</span><br><span class="line">            <span class="keyword">int</span> p = prices[i];</span><br><span class="line">            fb = Math.max(-p,fb);</span><br><span class="line">            fs = Math.max(fs,fb+p);</span><br><span class="line">            sb = Math.max(sb,fs-p);</span><br><span class="line">            ss = Math.max(ss,p+sb);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ss;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="买卖股票的最佳时机-IV"><a href="#买卖股票的最佳时机-IV" class="headerlink" title="买卖股票的最佳时机 IV"></a>买卖股票的最佳时机 IV</h2><p>题目链接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/">买卖股票的最佳时机 IV</a></p>
+<p>描述：</p>
+<blockquote>
+<p>给定一个整数数组 prices ，它的第 i 个元素 prices[i] 是一支给定的股票在第 i 天的价格。</p>
+<p>设计一个算法来计算你所能获取的最大利润。你<strong>最多可以完成 k 笔</strong>交易。</p>
+<p>注意：你不能同时参与多笔交易（你必须在再次购买前出售掉之前的股票）。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="NIX"><figure class="iseeu highlight /nix"><table><tr><td class="code"><pre><span class="line">输入：<span class="attr">k</span> = <span class="number">2</span>, <span class="attr">prices</span> = [<span class="number">3</span>,<span class="number">2</span>,<span class="number">6</span>,<span class="number">5</span>,<span class="number">0</span>,<span class="number">3</span>]</span><br><span class="line">输出：<span class="number">7</span></span><br></pre></td></tr></table></figure></div>
+</blockquote>
+<p>​    这题其实跟股票III差不多的，只不过最多交易次数从2变成了k这个不定量，思维还是相通的，通过列举k为2、3、4可以发现，在dp[i][j]中第二维的下标为奇数时都是代表股票买入的状态，下标为偶数(除了0)都是代表股票卖出的状态。于是我们的二维数组就可以申请为dp[n][2*k+1]。这里有一个思考点，就是k如果大于等于数组长度的一般的话，其实就变成跟股票II一样的题目没有限制最多交易次数了，因为买入卖出才算一次交易，也就是一次交易就占据了两天，如果最多次数超过数组长度的一半，那也就是相当于超过n天了，所以在k大于等于数组长度一半时直接采用贪心做法更加高效。代码如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span> k, <span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">if</span>(<span class="number">0</span> == k || n == <span class="number">0</span>)<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当交易次数的限制超过或等于数组长度一半时等同于无限制</span></span><br><span class="line">        <span class="keyword">if</span>(k &gt;= n/<span class="number">2</span>)<span class="keyword">return</span> greedy(prices);</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">2</span>*k+<span class="number">1</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; <span class="number">2</span>*k;i+=<span class="number">2</span>)&#123;</span><br><span class="line">            dp[<span class="number">0</span>][i] = -prices[<span class="number">0</span>];</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">0</span>;j &lt; <span class="number">2</span>*k-<span class="number">1</span>;j+=<span class="number">2</span>)&#123;</span><br><span class="line">                dp[i][j+<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][j+<span class="number">1</span>],dp[i-<span class="number">1</span>][j]-prices[i]);</span><br><span class="line">                dp[i][j+<span class="number">2</span>] = Math.max(dp[i-<span class="number">1</span>][j+<span class="number">2</span>],dp[i-<span class="number">1</span>][j+<span class="number">1</span>]+prices[i]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">2</span>*k];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">greedy</span><span class="params">(<span class="keyword">int</span>[] prices)</span></span>&#123;</span><br><span class="line">        <span class="keyword">int</span> max = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; prices.length;i++)&#123;</span><br><span class="line">            max += Math.max(prices[i]-prices[i-<span class="number">1</span>],<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> max;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>跟上一题一样，也可以考虑对二维数组进行优化。这里的优化采用了两个一维数组buy[k+1]和sell[k+1]来代表在第i笔交易时买入股票和卖出股票时的最大利润，buy[i]的更新会参考上一笔交易卖出后的利润，所以容易得出buy的转移方程为<code>buy[i] = max(buy[i],sell[i-1]-prices[j])</code>，而sell的更新很容易因为我们常规套路做多的思维而写成<code>sell[i] = max(sell[i],buy[i-1]+prices[j])</code>，但要本次卖出股票只有在本次交易买入后才能卖出，而不能参考上一次买入股票时的利润，在执行本次卖出时上一次的交易已经是完成的了，所以是<strong>buy[i]</strong>+prices[j]。代码如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span> k, <span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">if</span>(<span class="number">0</span> == k || n == <span class="number">0</span>)<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当交易次数的限制超过或等于数组长度一半时等同于无限制</span></span><br><span class="line">        <span class="keyword">if</span>(k &gt;= n/<span class="number">2</span>)<span class="keyword">return</span> greedy(prices);</span><br><span class="line">        <span class="comment">//第i笔交易买入股票时的最大利润</span></span><br><span class="line">        <span class="keyword">int</span>[] buy = <span class="keyword">new</span> <span class="keyword">int</span>[k+<span class="number">1</span>];</span><br><span class="line">        <span class="comment">//第i笔交易卖出股票时的最大利润</span></span><br><span class="line">        <span class="keyword">int</span>[] sell = <span class="keyword">new</span> <span class="keyword">int</span>[k+<span class="number">1</span>];</span><br><span class="line">        Arrays.fill(buy,-prices[<span class="number">0</span>]);</span><br><span class="line">        <span class="comment">//写成for(int j = 0;j &lt; n;j++)的形式当成天数会比较好理解</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> p : prices)&#123;</span><br><span class="line">            <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt;= k;i++)&#123;</span><br><span class="line">                <span class="comment">//比较本次交易不买入股票的利益和上一笔交易卖出后买入股票的利益谁大</span></span><br><span class="line">                buy[i] = Math.max(buy[i],sell[i-<span class="number">1</span>]-p);</span><br><span class="line">                <span class="comment">//比较本次交易不卖出股票的利益和本次交易卖出股票的利益谁大</span></span><br><span class="line">                sell[i] = Math.max(sell[i],buy[i]+p);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sell[k];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">greedy</span><span class="params">(<span class="keyword">int</span>[] prices)</span></span>&#123;</span><br><span class="line">        <span class="keyword">int</span> max = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; prices.length;i++)&#123;</span><br><span class="line">            max += Math.max(prices[i]-prices[i-<span class="number">1</span>],<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> max;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+
+
+<p>以上就是买卖股票四题的方法总结了。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><blockquote>
 <ul>
-<li><a href="https://xiaolincoding.com/os/3_memory/vmem.html">小林coding-为什么要有虚拟内存</a></li>
-<li>《深入理解计算机系统》</li>
+<li><a href="https://www.programmercarl.com/0123.%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8%E7%9A%84%E6%9C%80%E4%BD%B3%E6%97%B6%E6%9C%BAIII.html">代码随想录——股票三</a></li>
+<li><a href="https://www.programmercarl.com/0188.%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8%E7%9A%84%E6%9C%80%E4%BD%B3%E6%97%B6%E6%9C%BAIV.html">代码随想录——股票四</a></li>
+<li>力扣题解及评论区</li>
 </ul>
 </blockquote>
 ]]></content>
       <categories>
-        <category>操作系统</category>
+        <category>算法</category>
       </categories>
       <tags>
-        <tag>操作系统</tag>
+        <tag>动态规划</tag>
+        <tag>贪心</tag>
       </tags>
   </entry>
   <entry>
@@ -556,84 +290,396 @@
       </tags>
   </entry>
   <entry>
-    <title>买卖股票问题</title>
-    <url>/%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8%E9%97%AE%E9%A2%98/</url>
-    <content><![CDATA[<p>​    今天重新写了些动态规划和贪心的题目，买卖股票的问题在这两个方面还是挺经典的。买卖股票在力扣上有四种题目，难度也是有涉及到简单、中等和困难。既然写了那么多次这几道题目，索性就水一篇文章来总结下买卖股票题的做法吧</p>
+    <title>浅谈虚拟内存</title>
+    <url>/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/</url>
+    <content><![CDATA[<p>​    关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。</p>
 <span id="more"></span>
 
-<h2 id="买卖股票的最佳时机"><a href="#买卖股票的最佳时机" class="headerlink" title="买卖股票的最佳时机"></a>买卖股票的最佳时机</h2><p>题目连接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/">买卖股票的最佳时机</a></p>
-<p>描述：</p>
+<h2 id="何为虚拟内存"><a href="#何为虚拟内存" class="headerlink" title="何为虚拟内存"></a>何为虚拟内存</h2><p>​    如果我们所有操作都直接去操作到物理内存的话很容易出现问题，当太多的进程需要太多的内存时，会因为内存的不足而导致部分进程无法运行。而且由于都是操作一块物理内存，很容易有一个进程写了另一个进程使用的内存造成问题，不好管理。所以为了更好地对内存进行管理，就有了虚拟内存。</p>
+<p>​    虚拟内存是对主存的一个抽象，我个人的理解来说，虚拟内存是磁盘里某个部分的映射，也就是虚拟内存其实是磁盘里某块连续的空间来的。虚拟内存的好处如下：</p>
 <blockquote>
-<p>给定一个数组 prices ，它的第 i 个元素 prices[i] 表示一支给定股票第 i 天的价格。</p>
-<p>你只能选择 某一天 买入这只股票，并选择在 未来的某一个不同的日子 卖出该股票。设计一个算法来计算你所能获取的最大利润。</p>
-<p>返回你可以从这笔交易中获取的最大利润。如果你不能获取任何利润，返回 0 。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="ACCESSLOG"><figure class="iseeu highlight /accesslog"><table><tr><td class="code"><pre><span class="line">输入：<span class="string">[7,1,5,3,6,4]</span></span><br><span class="line">输出：<span class="number">5</span></span><br></pre></td></tr></table></figure></div>
-</blockquote>
-<p>​    作为股票题的第一题很简单，根据题目的描述，由于只进行一次交易，所以只需找到最低价买入，最高价卖出就行了。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span> buy = prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">int</span> profit = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            buy = Math.min(buy,prices[i]);</span><br><span class="line">            profit = Math.max(profit,prices[i]-buy);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> profit;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<p>​    这题也可以用动态规划的做法来做，只不过上面的贪心算法会更加的快更容易想。这里也写上动态规划的代码</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">2</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">1</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            dp[i][<span class="number">0</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">0</span>],dp[i-<span class="number">1</span>][<span class="number">1</span>]+prices[i]);</span><br><span class="line">            dp[i][<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">1</span>],-prices[i]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">0</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<h2 id="买卖股票的最佳时机-II"><a href="#买卖股票的最佳时机-II" class="headerlink" title="买卖股票的最佳时机 II"></a>买卖股票的最佳时机 II</h2><p>题目链接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/">买卖股票的最佳时机 II</a></p>
-<p>描述：</p>
-<blockquote>
-<p>给你一个整数数组 prices ，其中 prices[i] 表示某支股票第 i 天的价格。</p>
-<p>在每一天，你可以决定是否购买和/或出售股票。你在任何时候 最多 只能持有 一股 股票。你也可以先购买，然后在 同一天 出售。</p>
-<p>返回 你能获得的 最大 利润 。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="ACCESSLOG"><figure class="iseeu highlight /accesslog"><table><tr><td class="code"><pre><span class="line">输入：prices = <span class="string">[7,1,5,3,6,4]</span></span><br><span class="line">输出：<span class="number">7</span></span><br></pre></td></tr></table></figure></div>
-</blockquote>
-<p>​    这一题与股票1的差别在于<strong>没有限制最多交易的次数</strong>，即我们可以多次进行买卖，这一题动态规划的做法我觉得是相对比较容易想出来的，定义一个二维数组dp[n][2]，dp[i][0]表示当前不持有股票的最大利润，dp[i][1]表示当前持有股票的最大利润。dp[i][0]可以是之前不持有股票的利润，也可以是把之前的股票在当前卖出后的利润，取它们之间的最大值即可，dp[i][1]可以是之前持有股票的利润，也可以是在之前没有持有股票买入当前股票后的利润，也是取它们之间的最大值即可。就可以得出这么一个状态转移方程：<br>$$<br>dp[i][0]=max(dp[i-1][0],dp[i-1][1]+prices[i])<br>\<br>dp[i][1]=max(dp[i-1][1],dp[i-1][0]-prices[i])<br>$$<br>​    状态方程得出来之后也很容易写出代码：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">2</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">1</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            dp[i][<span class="number">0</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">0</span>],dp[i-<span class="number">1</span>][<span class="number">1</span>]+prices[i]);</span><br><span class="line">            dp[i][<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">1</span>],dp[i-<span class="number">1</span>][<span class="number">0</span>]-prices[i]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">0</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<p>​    这题也是可以用贪心的做法来做的，我们可以把利润的获取拆分开来，假设我们有1、5、6这三个价格，一眼看上去我们是在价格为1时买入，价格为6时卖出，我们可以把这个过程看成在5的时候价格比1高，我们在5卖出，卖出后再把5作为买入价格，到6的时候价格比5高我们卖出股票，这个过程的利润就可以看成<code>(5-1)+(6-5)</code>，也就是<code>6-1</code>。所以我们只需把每天的正利润累加起来即可得到正确答案。代码如下：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span> res = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt;n;i++)&#123;</span><br><span class="line">            res += Math.max(prices[i]-prices[i-<span class="number">1</span>],<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<h2 id="买卖股票的最佳时机-III"><a href="#买卖股票的最佳时机-III" class="headerlink" title="买卖股票的最佳时机 III"></a>买卖股票的最佳时机 III</h2><p>题目链接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iii/">买卖股票的最佳时机 III</a></p>
-<p>描述：</p>
-<blockquote>
-<p>给定一个数组，它的第 i 个元素是一支给定的股票在第 i 天的价格。</p>
-<p>设计一个算法来计算你所能获取的最大利润。你<strong>最多</strong>可以完成 <strong>两笔</strong> 交易。</p>
-<p>注意：你不能同时参与多笔交易（你必须在再次购买前出售掉之前的股票）。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="DNS"><figure class="iseeu highlight /dns"><table><tr><td class="code"><pre><span class="line">输入：prices = [<span class="number">3,3,5,0</span>,<span class="number">0,3,1,4</span>]</span><br><span class="line">输出：<span class="number">6</span></span><br></pre></td></tr></table></figure></div>
-</blockquote>
-<p>​    这道题跟股票II相比区别在于这里限制了交易次数是<strong>最多两次</strong>，也就是我们不能像股票II那样去贪心了，那就使用动态规划的做法来写。因为限制交易次数，状态可以分为：不操作、第一次交易买入、第一次交易卖出、第二次交易买入和第二次交易卖出这五种状态。用二维数组表示的话就是dp[n][5]，其中dp[i][0]代表不操作，dp[i][1]代表在第i天第一次交易中是有买入股票，但要注意不一定是在第i天买的，dp[i][2]代表在第i天第一次交易已卖出，也要注意不一定是在第i天卖出。dp[i][3]和dp[i][4]的意思也跟上面一样，区别在于是代表第二次交易，dp[i][3]的更新会需要有dp[i-1][2]的参与，因为这次的买入后利润是要基于第一次交易完成后的利润来计算的。代码就如下：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">5</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">1</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        dp[<span class="number">0</span>][<span class="number">3</span>] = -prices[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            dp[i][<span class="number">0</span>] = dp[i-<span class="number">1</span>][<span class="number">0</span>];</span><br><span class="line">            dp[i][<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">1</span>],dp[i-<span class="number">1</span>][<span class="number">0</span>]-prices[i]);</span><br><span class="line">            dp[i][<span class="number">2</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">2</span>],dp[i-<span class="number">1</span>][<span class="number">1</span>]+prices[i]);</span><br><span class="line">            dp[i][<span class="number">3</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">3</span>],dp[i-<span class="number">1</span>][<span class="number">2</span>]-prices[i]);</span><br><span class="line">            dp[i][<span class="number">4</span>] = Math.max(dp[i-<span class="number">1</span>][<span class="number">4</span>],dp[i-<span class="number">1</span>][<span class="number">3</span>]+prices[i]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">4</span>];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<p>通过代码可以看到dp[i]的状态只依赖于dp[i-1]，那么可以考虑缩减层次，这里可以用四个常量来表示后四种状态，代码如下：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="comment">//fb表示该天第一次买入股票的最大利润，fs表示该天第一次卖出股票的最大利润</span></span><br><span class="line">        <span class="keyword">int</span> fb = -prices[<span class="number">0</span>],fs = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//sb表示该天第二次买入股票的最大利润，ss表示该天第二次卖出股票的最大利润</span></span><br><span class="line">        <span class="keyword">int</span> sb = -prices[<span class="number">0</span>],ss = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; prices.length;i++)&#123;</span><br><span class="line">            <span class="keyword">int</span> p = prices[i];</span><br><span class="line">            fb = Math.max(-p,fb);</span><br><span class="line">            fs = Math.max(fs,fb+p);</span><br><span class="line">            sb = Math.max(sb,fs-p);</span><br><span class="line">            ss = Math.max(ss,p+sb);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ss;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<h2 id="买卖股票的最佳时机-IV"><a href="#买卖股票的最佳时机-IV" class="headerlink" title="买卖股票的最佳时机 IV"></a>买卖股票的最佳时机 IV</h2><p>题目链接：<a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-iv/">买卖股票的最佳时机 IV</a></p>
-<p>描述：</p>
-<blockquote>
-<p>给定一个整数数组 prices ，它的第 i 个元素 prices[i] 是一支给定的股票在第 i 天的价格。</p>
-<p>设计一个算法来计算你所能获取的最大利润。你<strong>最多可以完成 k 笔</strong>交易。</p>
-<p>注意：你不能同时参与多笔交易（你必须在再次购买前出售掉之前的股票）。</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="NIX"><figure class="iseeu highlight /nix"><table><tr><td class="code"><pre><span class="line">输入：<span class="attr">k</span> = <span class="number">2</span>, <span class="attr">prices</span> = [<span class="number">3</span>,<span class="number">2</span>,<span class="number">6</span>,<span class="number">5</span>,<span class="number">0</span>,<span class="number">3</span>]</span><br><span class="line">输出：<span class="number">7</span></span><br></pre></td></tr></table></figure></div>
-</blockquote>
-<p>​    这题其实跟股票III差不多的，只不过最多交易次数从2变成了k这个不定量，思维还是相通的，通过列举k为2、3、4可以发现，在dp[i][j]中第二维的下标为奇数时都是代表股票买入的状态，下标为偶数(除了0)都是代表股票卖出的状态。于是我们的二维数组就可以申请为dp[n][2*k+1]。这里有一个思考点，就是k如果大于等于数组长度的一般的话，其实就变成跟股票II一样的题目没有限制最多交易次数了，因为买入卖出才算一次交易，也就是一次交易就占据了两天，如果最多次数超过数组长度的一半，那也就是相当于超过n天了，所以在k大于等于数组长度一半时直接采用贪心做法更加高效。代码如下：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span> k, <span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">if</span>(<span class="number">0</span> == k || n == <span class="number">0</span>)<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当交易次数的限制超过或等于数组长度一半时等同于无限制</span></span><br><span class="line">        <span class="keyword">if</span>(k &gt;= n/<span class="number">2</span>)<span class="keyword">return</span> greedy(prices);</span><br><span class="line">        <span class="keyword">int</span>[][] dp = <span class="keyword">new</span> <span class="keyword">int</span>[n][<span class="number">2</span>*k+<span class="number">1</span>];</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; <span class="number">2</span>*k;i+=<span class="number">2</span>)&#123;</span><br><span class="line">            dp[<span class="number">0</span>][i] = -prices[<span class="number">0</span>];</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; n;i++)&#123;</span><br><span class="line">            <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">0</span>;j &lt; <span class="number">2</span>*k-<span class="number">1</span>;j+=<span class="number">2</span>)&#123;</span><br><span class="line">                dp[i][j+<span class="number">1</span>] = Math.max(dp[i-<span class="number">1</span>][j+<span class="number">1</span>],dp[i-<span class="number">1</span>][j]-prices[i]);</span><br><span class="line">                dp[i][j+<span class="number">2</span>] = Math.max(dp[i-<span class="number">1</span>][j+<span class="number">2</span>],dp[i-<span class="number">1</span>][j+<span class="number">1</span>]+prices[i]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dp[n-<span class="number">1</span>][<span class="number">2</span>*k];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">greedy</span><span class="params">(<span class="keyword">int</span>[] prices)</span></span>&#123;</span><br><span class="line">        <span class="keyword">int</span> max = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; prices.length;i++)&#123;</span><br><span class="line">            max += Math.max(prices[i]-prices[i-<span class="number">1</span>],<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> max;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-<p>跟上一题一样，也可以考虑对二维数组进行优化。这里的优化采用了两个一维数组buy[k+1]和sell[k+1]来代表在第i笔交易时买入股票和卖出股票时的最大利润，buy[i]的更新会参考上一笔交易卖出后的利润，所以容易得出buy的转移方程为<code>buy[i] = max(buy[i],sell[i-1]-prices[j])</code>，而sell的更新很容易因为我们常规套路做多的思维而写成<code>sell[i] = max(sell[i],buy[i-1]+prices[j])</code>，但要本次卖出股票只有在本次交易买入后才能卖出，而不能参考上一次买入股票时的利润，在执行本次卖出时上一次的交易已经是完成的了，所以是<strong>buy[i]</strong>+prices[j]。代码如下：</p>
-<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">maxProfit</span><span class="params">(<span class="keyword">int</span> k, <span class="keyword">int</span>[] prices)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> n = prices.length;</span><br><span class="line">        <span class="keyword">if</span>(<span class="number">0</span> == k || n == <span class="number">0</span>)<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        <span class="comment">//当交易次数的限制超过或等于数组长度一半时等同于无限制</span></span><br><span class="line">        <span class="keyword">if</span>(k &gt;= n/<span class="number">2</span>)<span class="keyword">return</span> greedy(prices);</span><br><span class="line">        <span class="comment">//第i笔交易买入股票时的最大利润</span></span><br><span class="line">        <span class="keyword">int</span>[] buy = <span class="keyword">new</span> <span class="keyword">int</span>[k+<span class="number">1</span>];</span><br><span class="line">        <span class="comment">//第i笔交易卖出股票时的最大利润</span></span><br><span class="line">        <span class="keyword">int</span>[] sell = <span class="keyword">new</span> <span class="keyword">int</span>[k+<span class="number">1</span>];</span><br><span class="line">        Arrays.fill(buy,-prices[<span class="number">0</span>]);</span><br><span class="line">        <span class="comment">//写成for(int j = 0;j &lt; n;j++)的形式当成天数会比较好理解</span></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> p : prices)&#123;</span><br><span class="line">            <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt;= k;i++)&#123;</span><br><span class="line">                <span class="comment">//比较本次交易不买入股票的利益和上一笔交易卖出后买入股票的利益谁大</span></span><br><span class="line">                buy[i] = Math.max(buy[i],sell[i-<span class="number">1</span>]-p);</span><br><span class="line">                <span class="comment">//比较本次交易不卖出股票的利益和本次交易卖出股票的利益谁大</span></span><br><span class="line">                sell[i] = Math.max(sell[i],buy[i]+p);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> sell[k];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">greedy</span><span class="params">(<span class="keyword">int</span>[] prices)</span></span>&#123;</span><br><span class="line">        <span class="keyword">int</span> max = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>;i &lt; prices.length;i++)&#123;</span><br><span class="line">            max += Math.max(prices[i]-prices[i-<span class="number">1</span>],<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> max;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
-
-
-
-<p>以上就是买卖股票四题的方法总结了。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><blockquote>
 <ul>
-<li><a href="https://www.programmercarl.com/0123.%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8%E7%9A%84%E6%9C%80%E4%BD%B3%E6%97%B6%E6%9C%BAIII.html">代码随想录——股票三</a></li>
-<li><a href="https://www.programmercarl.com/0188.%E4%B9%B0%E5%8D%96%E8%82%A1%E7%A5%A8%E7%9A%84%E6%9C%80%E4%BD%B3%E6%97%B6%E6%9C%BAIV.html">代码随想录——股票四</a></li>
-<li>力扣题解及评论区</li>
+<li>把主存当作是一个存储在磁盘上的地址空间的<strong>高速缓存</strong>，虚拟内存维护的是磁盘里面的数据，而这些数据在需要时会从磁盘缓存到主存中，让进程认为自己拥有这么一块主存空间，而主存存储一些活动区域，进程的部分代码可以缓存在其中，大大地<strong>提高了主存的利用率</strong>。</li>
+<li>虚拟内存为每个进程都提供了一致的地址空间，每个进程都有自己的私有区域和共享区域，即<strong>方便了内存的管理</strong>，也<strong>保护了每个进程的地址空间不被其他进程破坏</strong>。</li>
+</ul>
+</blockquote>
+<h2 id="虚拟内存结构"><a href="#虚拟内存结构" class="headerlink" title="虚拟内存结构"></a>虚拟内存结构</h2><p>​    CSAPP中有这么一张图描绘了Linux下虚拟内存的结构：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png" alt="image-20220821174738227"></p>
+<p>​    图中可以看到虚拟内存的结构就是一个<code>[内核虚拟内存][进程虚拟内存]</code>。</p>
+<h3 id="内核虚拟内存"><a href="#内核虚拟内存" class="headerlink" title="内核虚拟内存"></a>内核虚拟内存</h3><p>​    内核虚拟内存中又有对于每个进程而言相同和不相同的区域。物理内存和内核代码数据结构对每个进程来说是一样的，这部分区域里有着所映射的所有进程共享的物理页面，还有内核的代码和全局数据结构。另外一部分就是每个进程不同的数据部分，例如每个进程自己的页表、描述了进程任务的<code>task_struct</code>结构、描述了进程使用的虚拟内存情况的<code>mm_struct</code>结构和内核在执行上下文中执行代码时使用的栈。</p>
+<p>​    <code>task_struct</code>是内核为每一个进程维护的一个单独的任务结构，这个结构的元素包含或者指向内核运行该进程所需要的所有信息，例如<strong>进程ID、指向用户栈的指针、可执行目标文件的名字和程序计数器</strong>等。该结构里有一个元素指向了<code>mm_struct</code>，这个结构描述了虚拟内存当前的状态，该结构里我们关注<code>pgd</code>和<code>mmap</code>这两个字段，<code>pgd</code>指向的是一级页表的基址，而<code>mmap</code>指向的是一个描述区域结构<code>vm_area_structs</code> 的链表，这个区域结构描述了当前虚拟地址空间的一个区域。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png" alt="image-20220821180629323"></p>
+<p>​    <code>vm_prot</code>描述了该区域内的页面读写权限，<code>vm_flags</code>描述了该区域内的页面是私有还是共享的。</p>
+<h3 id="进程虚拟内存"><a href="#进程虚拟内存" class="headerlink" title="进程虚拟内存"></a>进程虚拟内存</h3><p>​    进程虚拟内存从下到上的顺序是<code>.text</code>→<code>.data</code>→<code>.bss</code>→<code>运行时堆</code>→<code>共享库的内存映射区域</code>→<code>用户栈</code>，剩下的一些区域没有虚拟页，内核不记录这些不存在的虚拟页，这些部分也不占用任何的资源。</p>
+<p>​    <code>.text</code>存储的是编译好的代码段。</p>
+<p>​    <code>.data</code>存储的是已经进行了初始化的数据。</p>
+<p>​    <code>.bss</code>存储的是还未进行初始化的数据或者初始化为0的数据，是请求二进制零的，仅是占位符，不占空间。</p>
+<p>​    <strong><code>.text</code>段是只读的</strong>，而**<code>.data</code>和<code>.bss</code>段是可读/写的**。</p>
+<p>​    <code>运行时堆</code>则是运行时创建的一个区域，在C/C++中通常是通过<code>malloc</code>进行分配的，堆主要是存储的是我们运行进程时创建的一些变量对象等内容，内核维护着一个<code>brk</code>指针，指向堆的顶部。</p>
+<p>​    <code>共享库的映射区域</code>存储的就是与当前进程链接的共享对象的映射，概括的说就是动态库、共享内存等。</p>
+<p>​    <code>用户栈</code>则存储的是局部变量和函数调用的上下文等。</p>
+<p>​    如果学过Java的JVM的，对堆和栈都或多或少有印象和认识的，学习了虚拟内存后再去回顾JVM中类加载机制、对象创建和<strong>volatile</strong>变量的底层原理，说不定会有更加深刻的认知和记忆。</p>
+<h2 id="虚拟页"><a href="#虚拟页" class="headerlink" title="虚拟页"></a>虚拟页</h2><p>​    虚拟内存被系统分割成大小固定的块，这些块我们叫做<strong>虚拟页</strong>，物理内存分割的我们类似地称为<strong>物理页</strong>。虚拟页可以分为下面这三种：</p>
+<blockquote>
+<ul>
+<li>已经被分配且缓存在物理内存中的</li>
+<li>已经被分配但是还未缓存在物理内存中的</li>
+<li>还未被分配的。</li>
+</ul>
+</blockquote>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png" alt="image-20220821223900550"></p>
+<h3 id="页表"><a href="#页表" class="headerlink" title="页表"></a>页表</h3><p>​    为了判定一个虚拟页是否有缓存在物理内存中，使用到了一个叫做<strong>页表</strong>的结构，虚拟地址空间的每个页都有个在页表的页表项，这个页表项存有这个页面的有效位和其对应的物理地址或者磁盘地址，当有效位为1时，为物理地址，有效位为0时，如果页面已经分配，则为磁盘地址，否则为空地址。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png" alt="image-20220821233804778"></p>
+<p>​    页面的查找流程通常是这样的：处理器生成一个虚拟地址给CPU里的MMU(内存管理单元)，然后MMU翻译出这个虚拟地址所对应的页表项地址去页表查找，如果对应的页在内存中，则内存向MMU返回对应的页表项，然后MMU得出对应的物理地址后传送到内存中，最后内存返回所请求的数据给处理器。</p>
+<h3 id="缺页"><a href="#缺页" class="headerlink" title="缺页"></a>缺页</h3><p>​    上面是比较理想的情况，也有出现缺页的情况，即对应的物理页不在内存中，这时候就会触发缺页中断，系统由用户态进入到内核态，调用缺页异常处理程序，这个程序会选择一个牺牲页，如果该页面是个脏页面，内核就会把它写回磁盘后释放掉。然后再从磁盘中将对应的页面复制到内存中并更新页表，重新回到引起缺页的指令。而这在磁盘和内存之间传送页的行为称之为<strong>交换</strong>或者<strong>页面调度</strong>。要注意页面没有命中的影响是挺大的。如果调度的页面大小超过了物理内存的大小，就会不断进行页面地换入换出，造成<strong>抖动</strong>，这是很不好的影响。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png" alt="image-20220821231454373"></p>
+<h3 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h3><p>​    通常我们的页面的大小为<code>4KB</code>，一个页表项的大小为<code>4B</code>，在32位的系统下，就有$$2^{20}$$个页面，这样一个进程的页表就达到了<code>4MB</code>。所以就有了<strong>多级页表</strong>。假设我们有一个二级页表，第一级页表存储的是指向第二级页表的地址，第二级页表存储的是物理地址或者磁盘地址。这样我们就可以用一个<code>4KB</code>的一级页表去管理理论上总共<code>4MB</code>的二级页表，这看起来好像比之前多了，但其实我们往往不会为一个进程分配那么多内存的，而且如果一级页表的某个页表项是空的，则其对应的二级页表也不会存在的，只有在需要时才会创建，我们假设一级页表只有20%的页面在使用，那么所需要的的内存就是$$4KB+4MB*0.2=0.804MB$$，对比起只有单独的页表的<code>4MB</code>，那是节省了巨大的内存。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png" alt="image-20220821233204041"></p>
+<h3 id="快表TLB"><a href="#快表TLB" class="headerlink" title="快表TLB"></a>快表TLB</h3><p>​    除了多级页表，也有一个<code>TLB</code>，即我们所说的<strong>快表</strong>。根据<strong>局部性原理</strong>，在一段时间内，整个程序的执行仅限于程序中的某一部分。相应地，执行所访问的存储空间也局限于某个内存区域。我们把程序最常访问的页表项存在快表中，且快表是在CPU芯片里的，地址的翻译步骤都在MMU上，如果命中页面的话那速度是非常快的。如果快表没有命中，就会查找常规的页表，然后把查找到的页表项也存储到快表中，这一步可能会覆盖掉某个快表上的条目。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png" alt="image-20220821233649707"></p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><blockquote>
+<ul>
+<li><a href="https://xiaolincoding.com/os/3_memory/vmem.html">小林coding-为什么要有虚拟内存</a></li>
+<li>《深入理解计算机系统》</li>
 </ul>
 </blockquote>
 ]]></content>
       <categories>
-        <category>算法</category>
+        <category>操作系统</category>
       </categories>
       <tags>
-        <tag>动态规划</tag>
-        <tag>贪心</tag>
+        <tag>操作系统</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>Mysql慢查询——查询优化</title>
+    <url>/Mysql%E6%85%A2%E6%9F%A5%E8%AF%A2%E2%80%94%E2%80%94%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</url>
+    <content><![CDATA[<p>在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：<code>对于SQL查询慢的问题你要怎么去发现和解决</code>。最初我也大概只能回答个索引相关的，比如”通过EXPLAIN查看查询的访问类型和一些查询情况”， “查看是否可以在某些表的字段增加索引然后改写查询语句”等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这篇文章便是我针对这本书第六章内容的一些整理总结(其实就是相当于摘抄吧 :triumph: )。方便自己记忆的同时也放到博客上来给博客更新一下(其实是都放到本地没怎么上传到博客，属于是懒:dog:了)</p>
+<span id="more"></span>
+
+<h2 id="为什么查询慢"><a href="#为什么查询慢" class="headerlink" title="为什么查询慢"></a>为什么查询慢</h2><p>​    在我们看待这个问题的时候，我们就要想：是什么造成SQL的查询慢呢，通过对索引的学习我们也知道索引对于高性能的重要性，但光有索引也是不够的，查询语句的合理性也是要考虑的，如果一个查询语句写的很烂，即使我们的表结构和索引设计的再好，那也是无济于事的。</p>
+<p>​    查询的生命周期大致可以这么来看：客户端发送请求到服务器:point_right:服务器进行解析:point_right:生成执行计划:point_right:<strong>执行</strong>:point_right:返回结果给客户端。一个查询会在一个生命周期内涉及到这些个任务，而每个任务的完成时间也是不同的。我们可以针对这么一个大概的生命周期概念，来对我们的查询进行一个优化。</p>
+<h2 id="优化查询访问"><a href="#优化查询访问" class="headerlink" title="优化查询访问"></a>优化查询访问</h2><p>​    查询性能低一个最基本的原因是我们访问的数据太多，针对查询数据多这一问题，我们可以看看是否有存在这么两个问题：<code>是否查询了很多我们不需要的数据</code>；<code>MySQL的服务器是否在分析大量超过我们需要的数据</code>。</p>
+<h3 id="是否查询了很多不需要的数据"><a href="#是否查询了很多不需要的数据" class="headerlink" title="是否查询了很多不需要的数据"></a>是否查询了很多不需要的数据</h3><p>​    我们通常会认为MySQL返回的是我们需要的数据，但实际上MySQL是<strong>先返回全部的结果集再进行计算</strong>，所以我们有时候要考虑我们是否真的需要这么多数据呢，就好像我们要让一个页面显示10条数据，我们就要先查个100条数据然后再选前10条展示吗，显而易见是不用的，我们加个 limit 即可。</p>
+<p>​    对于<code>select *</code>的写法我们也要在使用的时候去想我们是否真的需要去使用它呢，对于一些开发者来说，在知道其性能影响的情况下，这样的写法可以简易开发和做到代码复用，是值得考虑的。<code>select *</code>会使得优化器无法完成<strong>索引覆盖扫描</strong>这类的优化，也会给服务器带来额外的IO、内存和CPU的消耗，在不需要<code>select *</code>的时候它便会给我们造成本没有的性能影响了。</p>
+<p>​    也有这么一种容易发生的情况，就是我们多次重复执行了相同的执行并且返回相同的数据，对于这样的数据，我们可以在第一次查询该数据时将其缓存起来，这样后面再需要时直接从缓存中获取即可。</p>
+<h3 id="MySQL是否分析扫描额外的数据"><a href="#MySQL是否分析扫描额外的数据" class="headerlink" title="MySQL是否分析扫描额外的数据"></a>MySQL是否分析扫描额外的数据</h3><p>​    当我们确认我们查询返回的确实是我们需要的数据后，我们就应该看看查询为了返回结果是否扫描了过多的数据。通常简单的衡量查询开销的指标是：<code>响应时间</code>,<code>扫描行数</code>,<code>返回行数</code>，这三个指标都记录在了MySQL的<strong>慢日志</strong>中，所以<strong>检查慢日志记录是扫描行数过多的查询的好办法</strong>。</p>
+<p>​    如果我们的查询扫描了大量的数据却只返回很少的行，可以考虑如下的优化方式：</p>
+<ul>
+<li>使用<strong>索引覆盖扫描</strong>，使存储引擎不需要回表即可返回结果</li>
+<li>改变库表结构</li>
+<li>重写这个复杂查询</li>
+</ul>
+<h2 id="重构查询方式"><a href="#重构查询方式" class="headerlink" title="重构查询方式"></a>重构查询方式</h2><p>​    如果我们的查询的列确实是需要的，索引的设计和库表的设计也没什么问题的时候，那么就可以考虑下更改我们的查询方式。对于一个大查询，我们可以考虑对它进行<code>分而治之</code>的方法来进行多个小查询。对于一些关联查询，我们也考虑是不是能对它进行<strong>分解</strong>，就像书上的例子那样：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png" alt="image-20220817170821072"></p>
+<p>​    这样可以让缓存的效率更高，因为有缓存，我们可能可以跳过某条查询或者减少IN()里的内容。也可以减少了锁的竞争。这样的查询也可能能提升查询效率，<code>IN()</code>让MySQL按照ID顺序进行查询，顺序IO是要比随机IO高效的。这样还可以减少冗余记录的查询，在数据库上关联查询我们就可能需要重复访问同一数据，在应用层上进行关联让我们可以对某条数据只查询一次，减少了网络和内存的消耗。</p>
+<p>上面所讲的是针对查询的访问和方式，但如果知道MySQL如何优化和执行查询时，那我们在优化查询时便可以按照一些原则让优化器能按我们设想的方向运行。下面这张图是发送一个请求时MySQL所做的事情：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817172702465.png" alt="image-20220817172702465"></p>
+<p>图中的<code>查询缓存</code>在MySQL8已经是关闭的了，《高性能MySQL》所基于的版本还是5版本的，所以如果是8版本或以上的是可以忽略掉查询缓存的。书上在<code>查询优化</code>做了很多的篇幅进行讲解，讲了很多优化器在一些查询上的优化细节和做法，这部分如果放上来记录的话篇幅还是挺长的，多到我也不知道怎么整理写上了比较好，所以第六章的查询优化处理这块还是很建议大家去阅读原书的，在这里我就先不写着了。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​    一个高性能的查询，需要好的库表设计、索引设计、查询语句设计和查询的优化方式，而查询的优化设计又是很多细节的，所以当SQL查询慢的原因是由于我们查询语句设计不妥当时，便可以照着该书籍第六章的方法去进行优化。</p>
+<p>​    通过网上资料的搜索SQL查询慢的原因也可能不在于查询语句的问题，比如网络不好的情况下，客户端和服务端之间的连接和传输受到影响、IO吞吐量小、缓存不够、出现死锁等等，硬件软件都会或多或少的影响到查询，还是要针对特定的原因去寻找对应的解决办法的。对于我个人来说，排插SQL查询慢的基本方向是通过查询<strong>慢日志</strong>来定位慢查询SQL，然后通过<strong>explain</strong>命令去分析该SQL的执行计划后进行相应的优化，如果优化完还是查询慢或者没有什么优化方向后，就再去考虑网络、内存、服务器和应用程序设计上的问题。</p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+      <tags>
+        <tag>MySQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JAVA均匀生成随机数</title>
+    <url>/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/</url>
+    <content><![CDATA[<h2 id="公式推导"><a href="#公式推导" class="headerlink" title="公式推导"></a>公式推导</h2><p>假如有一个函数rand2()会均匀生成[1,2]的随机数，现在想要实现一个rand4()的函数，第一次接触该类问题时，第一反应是如下所示：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="TAP"><figure class="iseeu highlight /tap"><table><tr><td class="code"><pre><span class="line">rand2() + rand2() = ? ==&gt; [2,4]</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 2 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 2 </span>    = 4</span><br><span class="line"></span><br><span class="line">// 为了把生成随机数的范围规约成[1,n]，于是在上一步的结果后减1</span><br><span class="line">(rand2()-1) + rand2() = ? ==&gt; [1,3]</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 2 </span>    = 3</span><br></pre></td></tr></table></figure></div>
+
+<span id="more"></span>
+
+<p>会发现生成的数字不是等概率的，造成这种情况的原因也很明显，有些数字是可以通过几个组合得来，有的只能通过一种组合得来</p>
+<p>若我们把(rand2()-1)乘以2，则会得到</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="TAP"><figure class="iseeu highlight /tap"><table><tr><td class="code"><pre><span class="line">(rand2()-1) ×<span class="number"> 2 </span>+ rand2() = ?</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 2 </span>    = 4</span><br></pre></td></tr></table></figure></div>
+
+<p>得到的结果恰好是等概率的。我们可以通过这种方法实现rand2()-&gt;rand4()</p>
+<p>我们再举个例子：有两个均匀随机函数rand9()和rand7()，a=(rand9-1)*7，b = rand7，result = a+b</p>
+<p>则能得到下列表格的结果：</p>
+<table>
+<thead>
+<tr>
+<th>a\b</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+</tr>
+<tr>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+<td>11</td>
+<td>12</td>
+<td>13</td>
+<td>14</td>
+</tr>
+<tr>
+<td>14</td>
+<td>15</td>
+<td>16</td>
+<td>17</td>
+<td>18</td>
+<td>19</td>
+<td>20</td>
+<td>21</td>
+</tr>
+<tr>
+<td>21</td>
+<td>22</td>
+<td>23</td>
+<td>24</td>
+<td>25</td>
+<td>26</td>
+<td>27</td>
+<td>28</td>
+</tr>
+<tr>
+<td>28</td>
+<td>29</td>
+<td>30</td>
+<td>31</td>
+<td>32</td>
+<td>33</td>
+<td>34</td>
+<td>35</td>
+</tr>
+<tr>
+<td>35</td>
+<td>36</td>
+<td>37</td>
+<td>38</td>
+<td>39</td>
+<td>40</td>
+<td>41</td>
+<td>42</td>
+</tr>
+<tr>
+<td>42</td>
+<td>43</td>
+<td>44</td>
+<td>45</td>
+<td>46</td>
+<td>47</td>
+<td>48</td>
+<td>49</td>
+</tr>
+<tr>
+<td>49</td>
+<td>50</td>
+<td>51</td>
+<td>52</td>
+<td>53</td>
+<td>54</td>
+<td>55</td>
+<td>56</td>
+</tr>
+<tr>
+<td>56</td>
+<td>57</td>
+<td>58</td>
+<td>59</td>
+<td>60</td>
+<td>61</td>
+<td>62</td>
+<td>63</td>
+</tr>
+</tbody></table>
+<p>可以看到这样也可以均匀随机的生成[1,63]的随机数，则可以得到这样的一个规律：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="REASONML"><figure class="iseeu highlight /reasonml"><table><tr><td class="code"><pre><span class="line">已知 rand<span class="constructor">_N()</span> 可以等概率的生成<span class="literal">[<span class="number">1</span>, N]</span>范围的随机数</span><br><span class="line">那么：</span><br><span class="line">(rand<span class="constructor">_X()</span> - <span class="number">1</span>) × Y + rand<span class="constructor">_Y()</span> ==&gt; 可以等概率的生成<span class="literal">[<span class="number">1</span>, X <span class="operator">*</span> Y]</span>范围的随机数</span><br><span class="line">即实现了 rand_X*<span class="constructor">Y()</span></span><br></pre></td></tr></table></figure></div>
+
+<p>公式：<br>$$<br>(rand_X() - 1) × Y + rand_Y() \Rightarrow 可以等概率的生成[1, X * Y]范围的随机数<br>$$</p>
+<h2 id="LC题目-优化"><a href="#LC题目-优化" class="headerlink" title="LC题目+优化"></a>LC题目+优化</h2><h3 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h3><p>再来看看Leetcode上的这一题：<a href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/">470. 用 Rand7() 实现 Rand10()</a></p>
+<p>要实现rand10()，就需要先实现<code>rand_N()</code>，并且保证N大于10且是10的倍数。这样再通过<code>rand_N() % 10 + 1</code> 就可以得到[1,10]范围的随机数了。</p>
+<p>rand_N()的实现方法可以通过上面推导出来的规律得到：</p>
+<p><code>(rand7()-1) × 7 + rand7()  ==&gt; rand49()</code></p>
+<p>但是这样实现的N不是10的倍数，这该怎么处理？这里就涉及到了“<strong>拒绝采样</strong>”的知识了，也就是说，如果某个采样结果不在要求的范围内，则丢弃它。基于上面的这些分析，再回头看下面的代码，想必是不难理解了。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> num = (rand7() - <span class="number">1</span>) * <span class="number">7</span> + rand7(); <span class="comment">// 等概率生成[1,49]范围的随机数</span></span><br><span class="line">            <span class="keyword">if</span>(num &lt;= <span class="number">40</span>) <span class="keyword">return</span> num % <span class="number">10</span> + <span class="number">1</span>; <span class="comment">// 拒绝采样，并返回[1,10]范围的随机数</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h3><p>根据上面的分析，我们已经知道<code>(rand7() - 1) * 7 + rand7()</code> 等概率生成<code>[1,49]</code>范围的随机数。而由于我们需要的是10的倍数，因此，需要舍弃掉<code>[41, 49]</code>这9个数。优化的点就始于——我们能否利用这些范围外的数字，以减少丢弃的值，提高命中率总而提高随机数生成效率。</p>
+<p>当生成的随机数x在<code>[41,49]</code>时，我们拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,9]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,63]</code>的随机数，若这次生成的随机数在<code>[61,63]</code>时，我们也拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,3]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,21]</code>的随机数，若这次生成的随机数为21，则我们拒绝采样21，但是舍弃的21只能得到1这一个随机数，没有用处，所以我们只能重新生成<code>[1,49]</code>的随机数。代码如下：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="JAVA"><figure class="iseeu highlight /java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">            <span class="keyword">int</span> a = (rand7()-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            <span class="keyword">int</span> b = rand7();</span><br><span class="line">            <span class="keyword">int</span> num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">40</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">40</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">60</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">60</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">20</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>执行效率也比上面快了许多</p>
+<p><img data-src="/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/image-20210905123421344.png" alt="image-20210905123421344"></p>
+<p>保留的数字范围可以通过下面这个公式得到：</p>
+<p>假设有<code>rand_X</code>，想得到<code>rand_Y</code>，<br><code>a = (rand_X()-1)*Y</code>，<code>b = rand_X()</code>;<br>则保留范围为：<br>$$<br>[1,Y*((a+b)_{max}/Y)]<br>$$<br>返回的数字为：<br>$$<br>(a+b)\pmod Y + 1<br>$$<br>参考题解链接：<a href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/solution/cong-zui-ji-chu-de-jiang-qi-ru-he-zuo-dao-jun-yun-/">从最基础的讲起如何做到均匀的生成随机数</a></p>
+]]></content>
+      <categories>
+        <category>JAVA</category>
+      </categories>
+      <tags>
+        <tag>JAVA</tag>
+        <tag>算法</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>代码块Mac风格</title>
+    <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
+    <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
+<p><img data-src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508161438627.png" alt="image-20210508161438627"></p>
+<span id="more"></span>
+
+<p>通过 <a href="https://miaosakurai.com/">樱井喵</a> 的这一篇 <a href="https://miaosakurai.com/2020/04/20/Hexo-NexT%E7%BE%8E%E5%8C%96%F0%9F%8D%95Mac-Panel%E9%A3%8E%E6%A0%BC%E4%BB%A3%E7%A0%81%E5%9D%97%E9%85%8D%E7%BD%AE/">博客</a> ，直接在 <code>主题配置文件</code>配置一下 <code>codeblock.copy_button.style: mac</code>就行了</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">copy_button:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">show_result:</span> <span class="literal">true</span></span><br><span class="line">    <span class="comment"># Available values: default | flat | mac</span></span><br><span class="line">    <span class="attr">style:</span> <span class="string">mac</span></span><br></pre></td></tr></table></figure></div>
+
+<p>要实现上面代码块的样式，我们可以在<code>站点目录\node_modules\highlight.js\styles</code>里发现有许多中css样式(tomorrow-theme也在其中)</p>
+<p><img data-src="/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508160824026.png" alt="image-20210508160824026"></p>
+<p>我们找到<code>主题配置文件</code>中的theme，把light和dark都改成上述文件夹里的某种样式就行了，我用的是tomorrow-night-bright，也就是本文代码块的样式。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YAML"><figure class="iseeu highlight /yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">theme:</span></span><br><span class="line">    <span class="attr">light:</span> <span class="string">tomorrow-night-bright</span></span><br><span class="line">    <span class="attr">dark:</span> <span class="string">tomorrow-night-bright</span></span><br></pre></td></tr></table></figure></div>
+
+<p>不过这种会对小代码块也同样生效，暂时我还没找到方法，等待后面找到了我再进行一波更新。</p>
+<p>在报错中我也找到了一个highlight.js的地址：<code>站点目录\themes\next\scripts\events\lib\highlight.js</code></p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+        <tag>代码块</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建分支存储源文件</title>
+    <url>/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/</url>
+    <content><![CDATA[<p>为了防止日后出现换电脑的情况而导致自己的配置文件和一些文档消失，所以创建一个分支存放源文件是有必要的，当然你也可以选择存放到云盘，只要你记得更新就是了。创建分支存放的方法其实也不是很复杂。</p>
+<span id="more"></span>
+
+<h2 id="初始化版本库并与远程仓库关联"><a href="#初始化版本库并与远程仓库关联" class="headerlink" title="初始化版本库并与远程仓库关联"></a>初始化版本库并与远程仓库关联</h2><p>一般按照网上方法所创建的博客是没有与远程仓库建立关联的，通过几个git命令来进行关联。</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">//将你的本地文件夹初始化成一个版本库</span><br><span class="line">git init</span><br><span class="line"></span><br><span class="line">//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin</span><br><span class="line">git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="创建并切换分支，提交文件"><a href="#创建并切换分支，提交文件" class="headerlink" title="创建并切换分支，提交文件"></a>创建并切换分支，提交文件</h2><p>创建并切换分支：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">git checkout -b <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
+
+<p>提交文件：</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">git add .</span><br><span class="line"></span><br><span class="line">git commit -m<span class="string">&quot;源文件&quot;</span></span><br><span class="line"></span><br><span class="line">git push origin <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="在GitHub中更改新分支为默认分支"><a href="#在GitHub中更改新分支为默认分支" class="headerlink" title="在GitHub中更改新分支为默认分支"></a>在GitHub中更改新分支为默认分支</h2><p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
+<p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
+<p><img data-src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
+<p>选中新创分支并点击Update</p>
+<p><img data-src="/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
+<p>它会弹出一个红色的经过，直接sure就行了。</p>
+<h2 id="后续日常管理操作"><a href="#后续日常管理操作" class="headerlink" title="后续日常管理操作"></a>后续日常管理操作</h2><p>只要你的<code>站点配置文件</code>里deploy的branch是master，在你执行<code>hexo g -d</code>后也同样会更新。在你进行了文章添加修改或修改样式等改动后，通过下面流程进行管理：</p>
+<ol>
+<li>依次执行<code>git add .</code> 、<code>git commit -m&quot;xxx&quot;</code>、<code>git push origin 新创分支名</code>推送到GitHub(注意此时当前分支是你新创的分支)。</li>
+<li>执行<code>hexo g -d</code>发布网站到master分支上</li>
+</ol>
+<p>建议不要调转这两者的顺序</p>
+<h2 id="在其他电脑修改博客"><a href="#在其他电脑修改博客" class="headerlink" title="在其他电脑修改博客"></a>在其他电脑修改博客</h2><p>通过git clone将仓库拉下来(默认分支为你当时新创的分支)</p>
+<p>然后在你copy下来的仓库文件夹通过git bash执行一下指令：<code>npm install hexo</code>、<code>npm install</code>、<code>npm install hexo-deployer-git</code>（不需要<code>hexo init</code>）。</p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在文章中添加更新时间</title>
+    <url>/makeUpdTime/</url>
+    <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。</p>
+<span id="more"></span>
+
+<h2 id="初始方法-不需要"><a href="#初始方法-不需要" class="headerlink" title="初始方法(不需要)"></a>初始方法(不需要)</h2><p><del>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</del></p>
+<p><img data-src="/makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
+<p><del>代码如下：</del></p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="HTML"><figure class="iseeu highlight /html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
+
+<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+
+
+
+<p>这样更新时间就能显示出来了。</p>
+<p><img data-src="/makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
+<hr>
+<h2 id="现方法"><a href="#现方法" class="headerlink" title="现方法"></a>现方法</h2><p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
+<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+
+<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="YML"><figure class="iseeu highlight /yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
+
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在文章中添加图片</title>
+    <url>/TestPage/</url>
+    <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
+<p>贴张图片测试一下能不能成功显示出来：👇</p>
+<p><img data-src="/TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
+<span id="more"></span>
+
+<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
+
+<p>修改<code>站点配置文件</code></p>
+<div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+
+<p>这样在创建文章时，会同样生成一个同名文件夹</p>
+<p><img data-src="/TestPage/image-20210507150008908.png" alt="实例"></p>
+<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
+<p><img data-src="/TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
+<p><del>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</del></p>
+<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>test</tag>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<span id="more"></span>
+
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><div class="highlight-wrap"autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" contenteditable="true"data-rel="BASH"><figure class="iseeu highlight /bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
   </entry>
 </search>
