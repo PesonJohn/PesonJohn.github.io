@@ -1,6 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>浅记I/O多路复用</title>
+    <url>/%E6%B5%85%E8%AE%B0I-O%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/</url>
+    <content><![CDATA[<p>​    传统的I/O模型是一种1对1的模型，即单个进程只在单个文件描述符上进行I/O操作，如果读缓冲区为空或者写缓冲区满，那么调用<code>read()</code>或者<code>write()</code>时就会阻塞直到有数据可读或者有空间可写。如果一个服务端连接了多个客户端，某个客户端在进行I/O时发生了阻塞，那么别的客户端就也需要等待，这样就造成了很大的影响，所以就希望能以非阻塞的方式进行I/O，即如果我们的I/O调用不能立刻完成的话，就返回错误而不是阻塞进程去等待。很容易地就想到采用多进程的方式，但是为父进程为每个文件描述符或者每个客户端fork一个子进程的话，又需要花费很多的资源，而且进程上下文的切换涉及到用户空间的和内核空间资源的切换，维护的代价也很大。<span id="more"></span>既然多进程模型过重的话我们呀很容易再去考虑比进程轻量许多的多线程模型，服务端每与一个客户端连接时，就会通过<code>pthread_create()</code>函数来创建线程，将<code>已连接socket</code>的文件描述符传递给线程，通过这个线程来与客户端进行通信。虽然线程所消耗的资源没有进程多，但是如果连接很多的话，频繁的线程创建销毁及上下文切换也是会造成不小的系统开销的，虽然可以通过<strong>线程池</strong>来维护线程的创建销毁，但是为了避免线程之间的竞争在操作的时候又需要加锁，这又会使得编程的工作变的复杂许多。</p>
+<h2 id="I-O多路复用"><a href="#I-O多路复用" class="headerlink" title="I/O多路复用"></a>I/O多路复用</h2><p>​    基于上面的问题，就有了I/O多路复用这么一个模型出来。简单的来说，I/O多路复用就是让一个进程同时监听多个socket，也就是允许进程同时检查多个文件描述符来找出是否有可执行I/O操作的。而比较经典的I/O多路复用接口便是<code>select()</code>、<code>poll()</code>和<code>epoll()</code>，其中epoll()是Linux2.6版本之后专有的。</p>
+<h3 id="select"><a href="#select" class="headerlink" title="select()"></a>select()</h3><p>​    select()函数实现多路复用的方式是：将用户态里的一组文件描述符集合拷贝到内核中，在内核中检查是否有事件发生，如果发生的话就把对应事件的文件描述符标记为就绪，当整个集合遍历完并且修改完后便把这组文件描述符集合再拷贝到用户空间中，然后在用户空间中去遍历这组文件描述符来看哪些是就绪的。可以看到一个select()方法就要涉及到<strong>2次的文件描述符集合遍历</strong>和<strong>2次文件描述符集合拷贝</strong>了。select()方法函数定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">select</span><span class="params">(<span class="keyword">int</span> nfds,fd_set *readfds,fd_set *wrtiefds,fd_set *exceptfds,struct timeval *timeout)</span></span>;</span><br><span class="line"><span class="comment">//readfds 是用来检测输入是否就绪的文件描述符集合。</span></span><br><span class="line"><span class="comment">//writefds 是用来检测输出是否就绪的文件描述符集合。</span></span><br><span class="line"><span class="comment">//exceptfds 是用来检测异常情况是否发生的文件描述符集合。</span></span><br><span class="line"><span class="comment">//nfds是比上面这3个文件描述符集合中所包含的最大文件描述符号还要大1的数。该参</span></span><br><span class="line"><span class="comment">//数使内核就不用去检查大于这个值的文件描述符号是否属于这些文件描述符集合。</span></span><br></pre></td></tr></table></figure>
+
+<p>​    在<strong>每次调用select时，都需要初始化fd_set</strong>。    </p>
+<p>​    select返回0时代表调用超时，返回-1时代表有错误发生，返回一个正整数代表有一个或者多个文件描述符就绪，如果一个文件描述符存在于多个文件描述符集合的话就会被统计多次。还有文件描述符集合的上限通常是1024。</p>
+<h3 id="poll"><a href="#poll" class="headerlink" title="poll()"></a>poll()</h3><p>​    poll()执行的任务和select是很相似的，区别在于poll()是通过一组文件描述符结构来代替select的三个集合。poll()函数的定义如下：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">poll</span><span class="params">(struct pollfd fds[],<span class="keyword">nfds_t</span> nfds,<span class="keyword">int</span> timeout)</span></span>;</span><br><span class="line"><span class="comment">//fds列出了我们需要poll()来检查的文件描述符。该参数为pollfd 结构体数组</span></span><br><span class="line"><span class="comment">//参数nfds 指定了数组fds 中元素的个数。数据类型nfds_t 实际为无符号整形。</span></span><br></pre></td></tr></table></figure>
+
+<p>pollfd的结构如下：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span>&#123;</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="keyword">short</span> events;</span><br><span class="line">    <span class="keyword">short</span> revents;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>上面的events和revents都是位掩码。调用者初始化events 来指定需要为描述符fd 做检查的事件。当poll()返回时，revents 被设定以此来表示该文件描述符上实际发生的事件。</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915122617255.png" alt="image-20220915122617255"></p>
+<p>​    poll返回正整数时表示有1 个或多个文件描述符处于就绪态了。返回值表示数组fds 中拥有非零revents 字段的pollfd 结构体数量。</p>
+<p>​    poll和select一样，只会告诉我们<strong>I/O操作是否会阻塞</strong>，而不是告诉我们到底能否成功传输数据。而且poll也是跟select一样要在用户态和内核态之间拷贝文件描述符集合和线性地遍历哪个文件描述符就绪。当并发数量上去之后，所消耗的时间也会线性地增长，占用CPU的时间也就越多，而造成这两个方法性能不好的原因是它们API设计的局限性：程序重复调用这些系统调用所检查的文件描述符集合都是相同的，可是<strong>内核并不会在每次调用成功后就记录下它们</strong>。poll与select相比，就是没有了文件描述符集合大小的上限，不过随着要检查的文件描述符越多，poll的数据结构也就越大，也就占用更多的CPU时间。</p>
+<h3 id="epoll"><a href="#epoll" class="headerlink" title="epoll()"></a>epoll()</h3><p>​    针对select和poll的问题，epoll便解决了他们的问题。epoll提供了三个函数，这三个函数分别是<code>epoll_create()</code>、<code>epoll_ctl()</code>和<code>epoll_wait()</code>：</p>
+<p>epoll_create:</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//创建一个epoll实例，返回值是这个epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//Linux2.6.8版本之前该方法有一个参数size来告诉内核应该如何为内部数据结构划分初始大小</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_create</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>​    用户调用该函数时，内核会创建一个struct eventpoll内核对象，并把它关联到当前进程的已打开的文件列表中。这个eventpoll对象有这么三个成员：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915211541276.png" alt="image-20220915211541276"></p>
+<p>epoll_ctl:</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//修改由文件描述符epfd所代表的epoll实例中的兴趣列表。</span></span><br><span class="line"><span class="comment">//epfd：epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//op：执行的操作，有EPOLL_CTL_ADD、EPOLL_CTL_MOD和EPOLL_CTL_DEL</span></span><br><span class="line"><span class="comment">//fd：所要操作的文件描述符</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_ctl</span><span class="params">(<span class="keyword">int</span> epfd,<span class="keyword">int</span> op,<span class="keyword">int</span> fd,struct epoll_event *ev)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span>&#123;</span></span><br><span class="line">    <span class="keyword">uint32_t</span> events; <span class="comment">//事件掩码</span></span><br><span class="line">    <span class="keyword">epoll_data_t</span> data; <span class="comment">//文件描述符fd的消息</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">union</span> <span class="title">epoll_data</span>&#123;</span></span><br><span class="line">    <span class="keyword">void</span> *ptr; <span class="comment">//指向用户自定义的数据</span></span><br><span class="line">    <span class="keyword">int</span> fd; <span class="comment">//注册的文件描述符</span></span><br><span class="line">    <span class="keyword">uint32_t</span> u32;</span><br><span class="line">    <span class="keyword">uint64_t</span> u64;</span><br><span class="line">&#125;<span class="keyword">epoll_data_t</span>;</span><br></pre></td></tr></table></figure>
+
+<p>​    调用<code>epoll_ctl()</code>函数注册socket时，以添加监视socket为例子，内核会分配一个红黑树节点，然后将所要等待的事件添加到这个socket的等待队列中，并且设置了回调函数<code>ep_poll_callback()</code>，最后将分配好的红黑树节点插入到红黑树中，也就是epoll实例的兴趣列表。上面的回调函数的主要功能是所监视的socket所等待的事件发生时，会将其在兴趣列表上对应的实例添加到就绪链表中，就绪链表不为空时就会唤醒等待着就绪链表的进程，其调用的epoll_wait也就能继续执行下去。</p>
+<p>epoll_wait:</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//阻塞等待所监视的文件描述符的事件发生，返回就绪的数目，并且将发生的事件写到evlist中</span></span><br><span class="line"><span class="comment">//epfd：epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//evlist：有关就绪态文件描述符的信息。数组evlist 的空间由调用者负责申请，所包含的元素个数在参数maxevents 中指定。</span></span><br><span class="line"><span class="comment">//maxevents：返回的就绪events的最大数目</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_wait</span><span class="params">(<span class="keyword">int</span> epfd,struct epoll_event *evlist,<span class="keyword">int</span> maxevents,<span class="keyword">int</span> timeout)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>​    <strong>epoll_wait是阻塞</strong>的，当就绪链表没有数据时epoll_wait就会阻塞着去等待，直到超时或者就绪链表非空才继续执行。    就像上面说的epoll有两个存储实例的结构：兴趣列表和就绪链表。<code>epoll_ctl()</code>函数则是负责把所要监视的socket加入到兴趣列表，或者是修改其在兴趣列表里的状态，亦或者是将其从兴趣列表删除。<strong>兴趣列表</strong>的结构是一个<strong>红黑树</strong>，红黑树是一个高效率的数据结构，红黑树能让 epoll 在<strong>查找效率、插入效率、内存开销等等多个方面比较均衡</strong>，增删改的时间复杂度通常为O(logn)，而且这颗红黑树是维护在<strong>内核中</strong>的，也就是我们并不需要将其在用户态和内核态之间拷贝来拷贝去的，只需要传入待监视的socket进去就行。就绪链表是一个<strong>双链表</strong>，epoll_wait在检测到就绪事件后就会把最多<strong>maxevents个</strong>就绪事件从内核复制到用户空间中，也就是复制到所传入进来的evlist中。这样系统所遍历的返回的文件描述符都是就绪的，比select和poll遍历全部文件描述符集合高效了许多。上面的过程用一张简单的图来描述就是如下这样：</p>
+<p><img data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915214425308.png" alt="image-20220915214425308"></p>
+<p>​    基于epoll的特点，<strong>epoll</strong>的应用场景是在<strong>大量的连接需要监视</strong>但只有<strong>少数的文件描述符处于就绪状态</strong>的情况，这是由于epoll采用的是事件触发机制，如果<strong>大量的连接要处于就绪状态，就会大量地调用回调函数</strong>，回调的过程中又会涉及到兴趣列表(或者说被监视的socket列表)的遍历，这样操作的话效率就不如select和poll直接遍历整个文件描述符集合来获取就绪文件描述符了。相对的说，<strong>select和poll</strong>的应用场景就是<strong>少量的连接但大部分连接都是处于就绪状态</strong>的情况。</p>
+<h3 id="事件触发"><a href="#事件触发" class="headerlink" title="事件触发"></a>事件触发</h3><h4 id="边缘触发-ET——Edge-Trigger"><a href="#边缘触发-ET——Edge-Trigger" class="headerlink" title="边缘触发(ET——Edge Trigger)"></a>边缘触发(ET——Edge Trigger)</h4><p>​    当监控的socket上有事件发生时，服务端只会在epoll_wait中苏醒一次收到通知，即使进程没有read读缓冲区或者write写缓冲区，也不会再次通知，<strong>直到该socket的下一个事件发生</strong>。采用边缘触发时，要让程序尽可能地在对应的文件描述符上去执行I/O，比如尽可能地读取字节，所以我们就会<strong>循环</strong>地在文件描述符上执行I/O，如果文件描述符是阻塞的，在没有数据可读写时就会阻塞，程序无法继续进行下去，这也就是为什么<strong>边缘触发通常配合非阻塞I/O</strong>来使用，使文件描述符在得到通知后重复执行I/O操作直到相应系统调用以错误码<strong>EAGAIN</strong>或者<strong>EWOULDBLOCK</strong>的形式失败。</p>
+<h4 id="水平触发-LT——Level-Trigger"><a href="#水平触发-LT——Level-Trigger" class="headerlink" title="水平触发(LT——Level Trigger)"></a>水平触发(LT——Level Trigger)</h4><p>​    当监控的socket有事件发生而且可以非阻塞地进行I/O调用时，服务端就会在epoll_wait中<strong>不断地苏醒收到通知，直到内核缓冲区的数据读写完毕</strong>。也就是说我们可以在任意时刻检查I/O状态，而且没有必要在文件描述符就绪后尽可能多地执行I/O操作，甚至不进行I/O操作。</p>
+<p>​    边缘触发的效率是比水平触发的效率高的，因为<strong>边缘触发下系统不会充斥着大量不关心的就绪文件描述符</strong>，在很大程度上降低了同一个epoll事件被重复触发的次数。select和poll只支持水平触发，而epoll支持边缘触发，但是<strong>epoll默认的触发机制是水平触发</strong>，如果要使用边缘触发，就要在调用<code>epoll_ctl()</code>注册时在其epoll_event结构中将events字段指定为<strong>EPOLLET</strong>。</p>
+<p>I/O多路复用的整理大概就是这些了，I/O多路复用涉及到的应用其实还是挺多的，就比如Redis，基于内存操作的Redis的瓶颈在网络I/O和内存大小，单线程的Redis通过I/O多路复用监听多个socket从而实现一个Redis线程处理多个I/O流的效果。如果对epoll源码感兴趣的，也可以自行去尝试阅读下，链接：<a href="https://github.com/torvalds/linux/blob/master/fs/eventpoll.c%E3%80%82">https://github.com/torvalds/linux/blob/master/fs/eventpoll.c。</a></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><blockquote>
+<ul>
+<li><a href="https://xiaolincoding.com/os/8_network_system/selete_poll_epoll.html">I/O 多路复用：select/poll/epoll</a></li>
+<li><a href="https://blog.csdn.net/u010429831/article/details/118600310">I/O多路复用的实现机制 - epoll 用法总结</a></li>
+<li><a href="https://www.cnblogs.com/zhangyjblogs/p/15862358.html">IO多路复用原理&amp;场景 </a></li>
+<li><a href="https://mp.weixin.qq.com/s?__biz=MjM5Njg5NDgwNA==&mid=2247484905&idx=1&sn=a74ed5d7551c4fb80a8abe057405ea5e&chksm=a6e304d291948dc4fd7fe32498daaae715adb5f84ec761c31faf7a6310f4b595f95186647f12&scene=21#wechat_redirect">图解 | 深入揭秘 epoll 是如何实现 IO 多路复用的！</a></li>
+</ul>
+</blockquote>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+        <tag>I/O多路复用</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spring--Bean的生命周期</title>
     <url>/Spring-Bean%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/</url>
     <content><![CDATA[<p>​    Spring对于Java开发者来说应该是再熟悉不过的一样东西了，这两天我把Spring的源码从官网下载下来并且进行编译，方便后面自己写一些测试用例(尽管被网速gank了很久)，并且结合了网上的一些文章去理解Spring IOC方面的知识和运作过程，我也跟着一些文章敲了测试用例，通过控制台的输出去记忆bean的生命周期过程，毕竟之前一直靠背去记忆实在是太容易忘记了。当然这篇文章也不会讲的很详细，这篇文章是在我看了一天的文章和敲完用例趁着记忆还深刻来通过记录博客来加深记忆的，下面就开始吧。</p>
