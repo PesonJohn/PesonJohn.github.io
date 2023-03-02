@@ -35,6 +35,6 @@
     "hexo-theme-redefine": "^1.1.4",
     "hexo-wordcount": "^6.0.1",
     "markdown-it-emoji": "^2.0.2",
-    "sakana-widget": "^2.2.1"
+    "sakana-widget": "^2.6.0"
   }
 }
