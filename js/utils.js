@@ -1,411 +1,491 @@
-/* global NexT, CONFIG */
+/* global REDEFINE */
 
-HTMLElement.prototype.wrap = function(wrapper) {
-  this.parentNode.insertBefore(wrapper, this);
-  this.parentNode.removeChild(this);
-  wrapper.appendChild(this);
-};
+REDEFINE.initUtils = () => {
+  REDEFINE.utils = {
+    html_root_dom: document.querySelector("html"),
+    pageContainer_dom: document.querySelector(".page-container"),
+    pageTop_dom: document.querySelector(".page-main-content-top"),
+    firstScreen_dom: document.querySelector(".first-screen-container"),
+    scrollProgressBar_dom: document.querySelector(".scroll-progress-bar"),
+    pjaxProgressBar_dom: document.querySelector(".pjax-progress-bar"),
+    pjaxProgressIcon_dom: document.querySelector(".pjax-progress-icon"),
+    backToTopButton_dom: document.querySelector(".tool-scroll-to-top"),
 
-// https://caniuse.com/mdn-api_element_classlist_replace
-if (typeof DOMTokenList.prototype.replace !== 'function') {
-  DOMTokenList.prototype.replace = function(remove, add) {
-    this.remove(remove);
-    this.add(add);
-  };
-}
+    innerHeight: window.innerHeight,
+    pjaxProgressBarTimer: null,
+    prevScrollValue: 0,
+    fontSizeLevel: 0,
 
-(function() {
-  const onPageLoaded = () => document.dispatchEvent(
-    new Event('page:loaded', {
-      bubbles: true
-    })
-  );
+    isHasScrollProgressBar:
+      REDEFINE.theme_config.style.scroll.progress_bar.enable === true,
+    isHasScrollPercent:
+      REDEFINE.theme_config.style.scroll.percent.enable === true,
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('readystatechange', onPageLoaded, {once: true});
-  } else {
-    onPageLoaded();
-  }
-  document.addEventListener('pjax:success', onPageLoaded);
-})();
+    // Scroll Style Handle
+    styleHandleWhenScroll() {
+      const scrollTop =
+        document.body.scrollTop || document.documentElement.scrollTop;
+      const scrollHeight =
+        document.body.scrollHeight || document.documentElement.scrollHeight;
+      const clientHeight =
+        window.innerHeight || document.documentElement.clientHeight;
 
-NexT.utils = {
+      const percent = Math.round(
+        (scrollTop / (scrollHeight - clientHeight)) * 100
+      );
 
-  /**
-   * Wrap images with fancybox.
-   */
-  wrapImageWithFancyBox: function() {
-    document.querySelectorAll('.post-body :not(a) > img, .post-body > img').forEach(element => {
-      const $image = $(element);
-      const imageLink = $image.attr('data-src') || $image.attr('src');
-      const $imageWrapLink = $image.wrap(`<a class="fancybox fancybox.image" href="${imageLink}" itemscope itemtype="http://schema.org/ImageObject" itemprop="url"></a>`).parent('a');
-      if ($image.is('.post-gallery img')) {
-        $imageWrapLink.attr('data-fancybox', 'gallery').attr('rel', 'gallery');
-      } else if ($image.is('.group-picture img')) {
-        $imageWrapLink.attr('data-fancybox', 'group').attr('rel', 'group');
-      } else {
-        $imageWrapLink.attr('data-fancybox', 'default').attr('rel', 'default');
+      if (this.isHasScrollProgressBar) {
+        const ProgressPercent = (
+          (scrollTop / (scrollHeight - clientHeight)) *
+          100
+        ).toFixed(3);
+        this.scrollProgressBar_dom.style.visibility =
+          percent === 0 ? "hidden" : "visible";
+        this.scrollProgressBar_dom.style.width = `${ProgressPercent}%`;
       }
 
-      const imageTitle = $image.attr('title') || $image.attr('alt');
-      if (imageTitle) {
-        $imageWrapLink.append(`<p class="image-caption">${imageTitle}</p>`);
-        // Make sure img title tag will show correctly in fancybox
-        $imageWrapLink.attr('title', imageTitle).attr('data-caption', imageTitle);
-      }
-    });
-
-    $.fancybox.defaults.hash = false;
-    $('.fancybox').fancybox({
-      loop   : true,
-      helpers: {
-        overlay: {
-          locked: false
-        }
-      }
-    });
-  },
-
-  registerExtURL: function() {
-    document.querySelectorAll('span.exturl').forEach(element => {
-      const link = document.createElement('a');
-      // https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
-      link.href = decodeURIComponent(atob(element.dataset.url).split('').map(c => {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      link.rel = 'noopener external nofollow noreferrer';
-      link.target = '_blank';
-      link.className = element.className;
-      link.title = element.title;
-      link.innerHTML = element.innerHTML;
-      element.parentNode.replaceChild(link, element);
-    });
-  },
-
-  /**
-   * One-click copy code support.
-   */
-  registerCopyCode: function() {
-    let figure = document.querySelectorAll('figure.highlight');
-    if (figure.length === 0) figure = document.querySelectorAll('pre:not(.mermaid)');
-    figure.forEach(element => {
-      element.querySelectorAll('.code .line span').forEach(span => {
-        span.classList.forEach(name => {
-          span.classList.replace(name, `hljs-${name}`);
-        });
-      });
-      if (!CONFIG.copycode) return;
-      element.insertAdjacentHTML('beforeend', '<div class="copy-btn"><i class="fa fa-copy fa-fw"></i></div>');
-      const button = element.querySelector('.copy-btn');
-      button.addEventListener('click', () => {
-        const lines = element.querySelector('.code') || element.querySelector('code');
-        const code = lines.innerText;
-        if (navigator.clipboard) {
-          // https://caniuse.com/mdn-api_clipboard_writetext
-          navigator.clipboard.writeText(code).then(() => {
-            button.querySelector('i').className = 'fa fa-check-circle fa-fw';
-          }, () => {
-            button.querySelector('i').className = 'fa fa-times-circle fa-fw';
-          });
+      if (this.isHasScrollPercent) {
+        const percent_dom = this.backToTopButton_dom.querySelector(".percent");
+        if (percent === 0 || percent === undefined) {
+          this.backToTopButton_dom.classList.remove("show");
         } else {
-          const ta = document.createElement('textarea');
-          ta.style.top = window.scrollY + 'px'; // Prevent page scrolling
-          ta.style.position = 'absolute';
-          ta.style.opacity = '0';
-          ta.readOnly = true;
-          ta.value = code;
-          document.body.append(ta);
-          ta.select();
-          ta.setSelectionRange(0, code.length);
-          ta.readOnly = false;
-          const result = document.execCommand('copy');
-          button.querySelector('i').className = result ? 'fa fa-check-circle fa-fw' : 'fa fa-times-circle fa-fw';
-          ta.blur(); // For iOS
-          button.blur();
-          document.body.removeChild(ta);
-        }
-      });
-      element.addEventListener('mouseleave', () => {
-        setTimeout(() => {
-          button.querySelector('i').className = 'fa fa-copy fa-fw';
-        }, 300);
-      });
-    });
-  },
-
-  wrapTableWithBox: function() {
-    document.querySelectorAll('table').forEach(element => {
-      const box = document.createElement('div');
-      box.className = 'table-container';
-      element.wrap(box);
-    });
-  },
-
-  registerVideoIframe: function() {
-    document.querySelectorAll('iframe').forEach(element => {
-      const supported = [
-        'www.youtube.com',
-        'player.vimeo.com',
-        'player.youku.com',
-        'player.bilibili.com',
-        'www.tudou.com'
-      ].some(host => element.src.includes(host));
-      if (supported && !element.parentNode.matches('.video-container')) {
-        const box = document.createElement('div');
-        box.className = 'video-container';
-        element.wrap(box);
-        const width = Number(element.width);
-        const height = Number(element.height);
-        if (width && height) {
-          box.style.paddingTop = (height / width * 100) + '%';
+          this.backToTopButton_dom.classList.add("show");
+          percent_dom.innerHTML = percent.toFixed(0);
         }
       }
-    });
-  },
 
-  registerScrollPercent: function() {
-    const backToTop = document.querySelector('.back-to-top');
-    const readingProgressBar = document.querySelector('.reading-progress-bar');
-    // For init back to top in sidebar if page was scrolled after page refresh.
-    window.addEventListener('scroll', () => {
-      if (backToTop || readingProgressBar) {
-        const contentHeight = document.body.scrollHeight - window.innerHeight;
-        const scrollPercent = contentHeight > 0 ? Math.min(100 * window.scrollY / contentHeight, 100) : 0;
-        if (backToTop) {
-          backToTop.classList.toggle('back-to-top-on', Math.round(scrollPercent) >= 5);
-          backToTop.querySelector('span').innerText = Math.round(scrollPercent) + '%';
-        }
-        if (readingProgressBar) {
-          readingProgressBar.style.setProperty('--progress', scrollPercent.toFixed(2) + '%');
-        }
-      }
-      if (!Array.isArray(NexT.utils.sections)) return;
-      let index = NexT.utils.sections.findIndex(element => {
-        return element && element.getBoundingClientRect().top > 0;
-      });
-      if (index === -1) {
-        index = NexT.utils.sections.length - 1;
-      } else if (index > 0) {
-        index--;
-      }
-      this.activateNavByIndex(index);
-    });
-
-    backToTop && backToTop.addEventListener('click', () => {
-      window.anime({
-        targets  : document.scrollingElement,
-        duration : 500,
-        easing   : 'linear',
-        scrollTop: 0
-      });
-    });
-  },
-
-  /**
-   * Tabs tag listener (without twitter bootstrap).
-   */
-  registerTabsTag: function() {
-    // Binding `nav-tabs` & `tab-content` by real time permalink changing.
-    document.querySelectorAll('.tabs ul.nav-tabs .tab').forEach(element => {
-      element.addEventListener('click', event => {
-        event.preventDefault();
-        // Prevent selected tab to select again.
-        if (element.classList.contains('active')) return;
-        // Add & Remove active class on `nav-tabs` & `tab-content`.
-        [...element.parentNode.children].forEach(target => {
-          target.classList.toggle('active', target === element);
-        });
-        // https://stackoverflow.com/questions/20306204/using-queryselector-with-ids-that-are-numbers
-        const tActive = document.getElementById(element.querySelector('a').getAttribute('href').replace('#', ''));
-        [...tActive.parentNode.children].forEach(target => {
-          target.classList.toggle('active', target === tActive);
-        });
-        // Trigger event
-        tActive.dispatchEvent(new Event('tabs:click', {
-          bubbles: true
-        }));
-      });
-    });
-
-    window.dispatchEvent(new Event('tabs:register'));
-  },
-
-  registerCanIUseTag: function() {
-    // Get responsive height passed from iframe.
-    window.addEventListener('message', ({ data }) => {
-      if (typeof data === 'string' && data.includes('ciu_embed')) {
-        const featureID = data.split(':')[1];
-        const height = data.split(':')[2];
-        document.querySelector(`iframe[data-feature=${featureID}]`).style.height = parseInt(height, 10) + 5 + 'px';
-      }
-    }, false);
-  },
-
-  registerActiveMenuItem: function() {
-    document.querySelectorAll('.menu-item a[href]').forEach(target => {
-      const isSamePath = target.pathname === location.pathname || target.pathname === location.pathname.replace('index.html', '');
-      const isSubPath = !CONFIG.root.startsWith(target.pathname) && location.pathname.startsWith(target.pathname);
-      target.classList.toggle('menu-item-active', target.hostname === location.hostname && (isSamePath || isSubPath));
-    });
-  },
-
-  registerLangSelect: function() {
-    const selects = document.querySelectorAll('.lang-select');
-    selects.forEach(sel => {
-      sel.value = CONFIG.page.lang;
-      sel.addEventListener('change', () => {
-        const target = sel.options[sel.selectedIndex];
-        document.querySelectorAll('.lang-select-label span').forEach(span => {
-          span.innerText = target.text;
-        });
-        // Disable Pjax to force refresh translation of menu item
-        window.location.href = target.dataset.href;
-      });
-    });
-  },
-
-  registerSidebarTOC: function() {
-    this.sections = [...document.querySelectorAll('.post-toc li a.nav-link')].map(element => {
-      const target = document.getElementById(decodeURI(element.getAttribute('href')).replace('#', ''));
-      // TOC item animation navigate.
-      element.addEventListener('click', event => {
-        event.preventDefault();
-        const offset = target.getBoundingClientRect().top + window.scrollY;
-        window.anime({
-          targets  : document.scrollingElement,
-          duration : 500,
-          easing   : 'linear',
-          scrollTop: offset + 10
-        });
-      });
-      return target;
-    });
-  },
-
-  activateNavByIndex: function(index) {
-    const target = document.querySelectorAll('.post-toc li a.nav-link')[index];
-    if (!target || target.classList.contains('active-current')) return;
-
-    document.querySelectorAll('.post-toc .active').forEach(element => {
-      element.classList.remove('active', 'active-current');
-    });
-    target.classList.add('active', 'active-current');
-    let parent = target.parentNode;
-    while (!parent.matches('.post-toc')) {
-      if (parent.matches('li')) parent.classList.add('active');
-      parent = parent.parentNode;
-    }
-    // Scrolling to center active TOC element if TOC content is taller then viewport.
-    const tocElement = document.querySelector('.sidebar-panel-container');
-    window.anime({
-      targets  : tocElement,
-      duration : 200,
-      easing   : 'linear',
-      scrollTop: tocElement.scrollTop - (tocElement.offsetHeight / 2) + target.getBoundingClientRect().top - tocElement.getBoundingClientRect().top
-    });
-  },
-
-  /**
-   * Init Sidebar & TOC inner dimensions on all pages and for all schemes.
-   * Need for Sidebar/TOC inner scrolling if content taller then viewport.
-   */
-  initSidebarDimension: function() {
-    const sidebarNav = document.querySelector('.sidebar-nav');
-    const sidebarb2t = document.querySelector('.sidebar-inner .back-to-top');
-    const sidebarNavHeight = sidebarNav ? sidebarNav.offsetHeight : 0;
-    const sidebarb2tHeight = sidebarb2t ? sidebarb2t.offsetHeight : 0;
-    const sidebarOffset = CONFIG.sidebar.offset || 12;
-    let sidebarSchemePadding = (CONFIG.sidebar.padding * 2) + sidebarNavHeight + sidebarb2tHeight;
-    if (CONFIG.scheme === 'Pisces' || CONFIG.scheme === 'Gemini') sidebarSchemePadding += sidebarOffset * 2;
-    // Initialize Sidebar & TOC Height.
-    const sidebarWrapperHeight = document.body.offsetHeight - sidebarSchemePadding + 'px';
-    document.documentElement.style.setProperty('--sidebar-wrapper-height', sidebarWrapperHeight);
-  },
-
-  updateSidebarPosition: function() {
-    NexT.utils.initSidebarDimension();
-    if (window.innerWidth < 992 || CONFIG.scheme === 'Pisces' || CONFIG.scheme === 'Gemini') return;
-    // Expand sidebar on post detail page by default, when post has a toc.
-    const hasTOC = document.querySelector('.post-toc');
-    let display = CONFIG.page.sidebar;
-    if (typeof display !== 'boolean') {
-      // There's no definition sidebar in the page front-matter.
-      display = CONFIG.sidebar.display === 'always' || (CONFIG.sidebar.display === 'post' && hasTOC);
-    }
-    if (display) {
-      window.dispatchEvent(new Event('sidebar:show'));
-    }
-  },
-
-  getScript: function(src, options = {}, legacyCondition) {
-    if (typeof options === 'function') {
-      return this.getScript(src, {
-        condition: legacyCondition
-      }).then(options);
-    }
-    const {
-      condition = false,
-      attributes: {
-        id = '',
-        async = false,
-        defer = false,
-        crossOrigin = '',
-        dataset = {},
-        ...otherAttributes
-      } = {},
-      parentNode = null
-    } = options;
-    return new Promise((resolve, reject) => {
-      if (condition) {
-        resolve();
+      // hide menu handle
+      if (scrollTop > this.prevScrollValue && scrollTop > this.innerHeight) {
+        this.pageTop_dom.classList.remove("hide");
       } else {
-        const script = document.createElement('script');
+        this.pageTop_dom.classList.remove("hide");
+      }
+      this.prevScrollValue = scrollTop;
+    },
 
-        if (id) script.id = id;
-        if (crossOrigin) script.crossOrigin = crossOrigin;
-        script.async = async;
-        script.defer = defer;
-        Object.assign(script.dataset, dataset);
-        Object.entries(otherAttributes).forEach(([name, value]) => {
-          script.setAttribute(name, String(value));
-        });
+    // register window scroll event
+    registerWindowScroll() {
+      window.addEventListener("scroll", () => {
+        // style handle when scroll
+        if (this.isHasScrollPercent || this.isHasScrollProgressBar) {
+          this.styleHandleWhenScroll();
+        }
 
-        script.onload = resolve;
-        script.onerror = reject;
+        // TOC scroll handle
+        if (
+          REDEFINE.theme_config.toc.enable &&
+          REDEFINE.utils.hasOwnProperty("updateActiveTOCLink")
+        ) {
+          REDEFINE.utils.updateActiveTOCLink();
+        }
 
-        if (typeof src === 'object') {
-          const { url, integrity } = src;
-          script.src = url;
-          if (integrity) {
-            script.integrity = integrity;
-            script.crossOrigin = 'anonymous';
+        // menu shrink
+        REDEFINE.utils.menuShrink.menuShrink();
+
+        // auto hide tools
+        var y = window.pageYOffset;
+        var height = document.body.scrollHeight;
+        var windowHeight = window.innerHeight;
+        var toolList = document.getElementsByClassName('right-bottom-side-tools');
+        
+        for (var i = 0; i < toolList.length; i++) {
+          var tools = toolList[i];
+          if (y <= 0) {
+            if (location.pathname !== '/') {
+              //console.log(location.pathname)
+            } else {
+              tools.classList.add('hide');
+            }
+          } else if (y + windowHeight >= height - 20) {
+            tools.classList.add('hide');
+          } else {
+            tools.classList.remove('hide');
           }
-        } else {
-          script.src = src;
         }
-        (parentNode || document.head).appendChild(script);
-      }
-    });
-  },
-
-  loadComments: function(selector, legacyCallback) {
-    if (legacyCallback) {
-      return this.loadComments(selector).then(legacyCallback);
-    }
-    return new Promise((resolve) => {
-      const element = document.querySelector(selector);
-      if (!CONFIG.comments.lazyload || !element) {
-        resolve();
-        return;
-      }
-      const intersectionObserver = new IntersectionObserver((entries, observer) => {
-        const entry = entries[0];
-        if (!entry.isIntersecting) return;
-
-        resolve();
-        observer.disconnect();
       });
-      intersectionObserver.observe(element);
-    });
-  }
+    },
+
+    // toggle show tools list
+    toggleShowToolsList() {
+      document
+        .querySelector(".tool-toggle-show")
+        .addEventListener("click", () => {
+          document
+            .querySelector(".unfolded-tools-list")
+            .classList.toggle("show");
+        });
+    },
+
+    // global font adjust
+    globalFontAdjust() {
+      const fontSize = document.defaultView.getComputedStyle(
+        document.body
+      ).fontSize;
+      const fs = parseFloat(fontSize);
+
+      const initFontSize = () => {
+        const styleStatus = REDEFINE.getStyleStatus();
+        if (styleStatus) {
+          this.fontSizeLevel = styleStatus.fontSizeLevel;
+          setFontSize(this.fontSizeLevel);
+        }
+      };
+
+      const setFontSize = (fontSizeLevel) => {
+        this.html_root_dom.style.fontSize = `${
+          fs * (1 + fontSizeLevel * 0.05)
+        }px`;
+        REDEFINE.styleStatus.fontSizeLevel = fontSizeLevel;
+        REDEFINE.setStyleStatus();
+      };
+
+      initFontSize();
+
+      document
+        .querySelector(".tool-font-adjust-plus")
+        .addEventListener("click", () => {
+          if (this.fontSizeLevel === 5) return;
+          this.fontSizeLevel++;
+          setFontSize(this.fontSizeLevel);
+        });
+
+      document
+        .querySelector(".tool-font-adjust-minus")
+        .addEventListener("click", () => {
+          if (this.fontSizeLevel <= 0) return;
+          this.fontSizeLevel--;
+          setFontSize(this.fontSizeLevel);
+        });
+    },
+
+    // toggle content area width
+    contentAreaWidthAdjust() {
+      const toolExpandDom = document.querySelector(".tool-expand-width");
+      const menuContentDom = document.querySelector(".menu-content");
+      const mainContentDom = document.querySelector(".main-content");
+      const iconDom = toolExpandDom.querySelector("i");
+
+      const defaultMaxWidth =
+        REDEFINE.theme_config.style.content_max_width || "1000px";
+      const expandMaxWidth = "90%";
+      let menuMaxWidth = defaultMaxWidth;
+
+      let isExpand = false;
+
+      if (
+        REDEFINE.theme_config.style.first_screen.enable === true &&
+        window.location.pathname === "/"
+      ) {
+        menuMaxWidth = parseInt(defaultMaxWidth) * 1.2 + "px";
+      }
+
+      const setPageWidth = (isExpand) => {
+        REDEFINE.styleStatus.isExpandPageWidth = isExpand;
+        REDEFINE.setStyleStatus();
+        if (isExpand) {
+          iconDom.classList.remove("fa-expand");
+          iconDom.classList.add("fa-compress");
+          menuContentDom.style.maxWidth = expandMaxWidth;
+          mainContentDom.style.maxWidth = expandMaxWidth;
+        } else {
+          iconDom.classList.remove("fa-compress");
+          iconDom.classList.add("fa-expand");
+          menuContentDom.style.maxWidth = menuMaxWidth;
+          mainContentDom.style.maxWidth = defaultMaxWidth;
+        }
+      };
+
+      const initPageWidth = () => {
+        const styleStatus = REDEFINE.getStyleStatus();
+        if (styleStatus) {
+          isExpand = styleStatus.isExpandPageWidth;
+          setPageWidth(isExpand);
+        }
+      };
+
+      initPageWidth();
+
+      toolExpandDom.addEventListener("click", () => {
+        isExpand = !isExpand;
+        setPageWidth(isExpand);
+      });
+    },
+
+    // go comment anchor
+    goComment() {
+      this.goComment_dom = document.querySelector(".go-comment");
+      if (this.goComment_dom) {
+        this.goComment_dom.addEventListener("click", () => {
+          document.querySelector("#comment-anchor").scrollIntoView({
+            behavior: "smooth",
+          });
+        });
+      }
+    },
+
+    // get dom element height
+    getElementHeight(selectors) {
+      const dom = document.querySelector(selectors);
+      return dom ? dom.getBoundingClientRect().height : 0;
+    },
+
+    // init first screen height
+    initFirstScreenHeight() {
+      this.firstScreen_dom &&
+        (this.firstScreen_dom.style.height = this.innerHeight + "px");
+    },
+
+    // init page height handle
+    initPageHeightHandle() {
+      if (this.firstScreen_dom) return;
+      const temp_h1 = this.getElementHeight(".page-main-content-top");
+      const temp_h2 = this.getElementHeight(".page-main-content-middle");
+      const temp_h3 = this.getElementHeight(".page-main-content-bottom");
+      const allDomHeight = temp_h1 + temp_h2 + temp_h3;
+      const innerHeight = window.innerHeight;
+      const pb_dom = document.querySelector(".page-main-content-bottom");
+      if (allDomHeight < innerHeight) {
+        const marginTopValue = Math.floor(innerHeight - allDomHeight);
+        if (marginTopValue > 0) {
+          pb_dom.style.marginTop = `${marginTopValue - 2}px`;
+        }
+      }
+    },
+
+    // big image viewer
+    imageViewer() {
+      let isBigImage = false;
+
+      const showHandle = (maskDom, isShow) => {
+        document.body.style.overflow = isShow ? "hidden" : "auto";
+        if (isShow) {
+          maskDom.classList.add("active");
+        } else {
+          maskDom.classList.remove("active");
+        }
+      };
+
+      const imageViewerDom = document.querySelector(".image-viewer-container");
+      const targetImg = document.querySelector(".image-viewer-container img");
+      imageViewerDom &&
+        imageViewerDom.addEventListener("click", () => {
+          isBigImage = false;
+          showHandle(imageViewerDom, isBigImage);
+        });
+
+      const imgDoms = document.querySelectorAll(".markdown-body img");
+
+      if (imgDoms.length) {
+        imgDoms.forEach((img) => {
+          img.addEventListener("click", () => {
+            isBigImage = true;
+            showHandle(imageViewerDom, isBigImage);
+            targetImg.setAttribute("src", img.getAttribute("src"));
+          });
+        });
+      } else {
+        this.pageContainer_dom.removeChild(imageViewerDom);
+      }
+    },
+
+    // set how long ago language
+    setHowLongAgoLanguage(p1, p2) {
+      return p2.replace(/%s/g, p1);
+    },
+    
+
+    getHowLongAgo(timestamp) {
+      const l = REDEFINE.language_ago;
+
+      const __Y = Math.floor(timestamp / (60 * 60 * 24 * 30) / 12);
+      const __M = Math.floor(timestamp / (60 * 60 * 24 * 30));
+      const __W = Math.floor(timestamp / (60 * 60 * 24) / 7);
+      const __d = Math.floor(timestamp / (60 * 60 * 24));
+      const __h = Math.floor((timestamp / (60 * 60)) % 24);
+      const __m = Math.floor((timestamp / 60) % 60);
+      const __s = Math.floor(timestamp % 60);
+
+      if (__Y > 0) {
+        return this.setHowLongAgoLanguage(__Y, l.year);
+      } else if (__M > 0) {
+        return this.setHowLongAgoLanguage(__M, l.month);
+      } else if (__W > 0) {
+        return this.setHowLongAgoLanguage(__W, l.week);
+      } else if (__d > 0) {
+        return this.setHowLongAgoLanguage(__d, l.day);
+      } else if (__h > 0) {
+        return this.setHowLongAgoLanguage(__h, l.hour);
+      } else if (__m > 0) {
+        return this.setHowLongAgoLanguage(__m, l.minute);
+      } else if (__s > 0) {
+        return this.setHowLongAgoLanguage(__s, l.second);
+      }
+    },
+
+    relativeTimeInHome() {
+      const post = document.querySelectorAll(
+        ".home-article-meta-info .home-article-date"
+      );
+      const df = REDEFINE.theme_config.home_article.date_format;
+      if (df === "relative") {
+        post &&
+          post.forEach((v) => {
+            const nowDate = Date.now();
+            const postDate = new Date(v.dataset.date.split(" GMT")[0]).getTime();
+            v.innerHTML = this.getHowLongAgo(
+              Math.floor((nowDate - postDate) / 1000)
+            );
+          });
+      } else if (df === "auto") {
+        post &&
+        post.forEach((v) => {
+          const nowDate = Date.now();
+          const postDate = new Date(v.dataset.date.split(" GMT")[0]).getTime();
+          const finalDays = Math.floor(
+            (nowDate - postDate) / (60 * 60 * 24 * 1000)
+          );
+          if (finalDays < 7) {
+            v.innerHTML = this.getHowLongAgo(
+              Math.floor((nowDate - postDate) / 1000)
+            );
+          }
+        });
+      }
+    },
+
+    // loading progress bar start
+    pjaxProgressBarStart() {
+      this.pjaxProgressBarTimer && clearInterval(this.pjaxProgressBarTimer);
+      if (this.isHasScrollProgressBar) {
+        this.scrollProgressBar_dom.classList.add("hide");
+      }
+
+      this.pjaxProgressBar_dom.style.width = "0";
+      this.pjaxProgressIcon_dom.classList.add("show");
+
+      let width = 1;
+      const maxWidth = 99;
+
+      this.pjaxProgressBar_dom.classList.add("show");
+      this.pjaxProgressBar_dom.style.width = width + "%";
+
+      this.pjaxProgressBarTimer = setInterval(() => {
+        width += 5;
+        if (width > maxWidth) width = maxWidth;
+        this.pjaxProgressBar_dom.style.width = width + "%";
+      }, 100);
+    },
+
+    // loading progress bar end
+    pjaxProgressBarEnd() {
+      this.pjaxProgressBarTimer && clearInterval(this.pjaxProgressBarTimer);
+      this.pjaxProgressBar_dom.style.width = "100%";
+
+      const temp_1 = setTimeout(() => {
+        this.pjaxProgressBar_dom.classList.remove("show");
+        this.pjaxProgressIcon_dom.classList.remove("show");
+
+        if (this.isHasScrollProgressBar) {
+          this.scrollProgressBar_dom.classList.remove("hide");
+        }
+
+        const temp_2 = setTimeout(() => {
+          this.pjaxProgressBar_dom.style.width = "0";
+          clearTimeout(temp_1), clearTimeout(temp_2);
+        }, 200);
+      }, 200);
+    },
+
+
+
+    /*
+    calculateMaterialColors(hex) {
+      // Convert hex to RGB
+      hex = hex.replace(/#/g, "");
+      if (hex.length === 3) {
+        hex = hex
+          .split("")
+          .map(function (hex) {
+            return hex + hex;
+          })
+          .join("");
+      }
+      var result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})[\da-z]{0,0}$/i.exec(
+        hex
+      );
+      if (!result) {
+        return null;
+      }
+      var r = parseInt(result[1], 16);
+      var g = parseInt(result[2], 16);
+      var b = parseInt(result[3], 16);
+      (r /= 255), (g /= 255), (b /= 255);
+      var max = Math.max(r, g, b),
+        min = Math.min(r, g, b);
+      var h,
+        s,
+        l = (max + min) / 2;
+      if (max == min) {
+        h = s = 0;
+      } else {
+        var d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r:
+            h = (g - b) / d + (g < b ? 6 : 0);
+            break;
+          case g:
+            h = (b - r) / d + 2;
+            break;
+          case b:
+            h = (r - g) / d + 4;
+            break;
+        }
+        h /= 6;
+      }
+      s = s * 100;
+      s = Math.round(s);
+      l = l * 100;
+      l = Math.round(l);
+      h = Math.round(360 * h);
+
+      // Compute primary, secondary, and tertiary colors
+      const primaryColor = `hsl(${h}, ${s}%, ${l}%)`;
+      const secondaryColor = `hsl(${h}, ${s - 15}%, ${l - 15}%)`;
+      const tertiaryColor = `hsl(${h}, ${s - 25}%, ${l - 25}%)`;
+      document.documentElement.style.setProperty('--primary-color-temp', primaryColor);
+      document.documentElement.style.setProperty('--secondary-color-temp', secondaryColor);
+      document.documentElement.style.setProperty('--tertiary-color-temp', tertiaryColor);
+    },*/
+  };
+
+  // init scroll
+  REDEFINE.utils.registerWindowScroll();
+
+  // toggle show tools list
+  REDEFINE.utils.toggleShowToolsList();
+
+  // global font adjust
+  REDEFINE.utils.globalFontAdjust();
+
+  // adjust content area width
+  REDEFINE.utils.contentAreaWidthAdjust();
+
+  // go comment
+  REDEFINE.utils.goComment();
+
+  // init page height handle
+  REDEFINE.utils.initPageHeightHandle();
+
+  // init first screen height
+  REDEFINE.utils.initFirstScreenHeight();
+
+  // big image viewer handle
+  REDEFINE.utils.imageViewer();
+
+  // set how long ago in home article block
+  REDEFINE.utils.relativeTimeInHome();
+
+  // calculate material colors
+  //REDEFINE.utils.calculateMaterialColors(REDEFINE.theme_config.style.primary_color);
 };
