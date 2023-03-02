@@ -137,6 +137,20 @@
   </url>
   
   <url>
+    <loc>https://iconson.top/tags/Java/</loc>
+    <lastmod>2023-03-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://iconson.top/tags/Spring/</loc>
+    <lastmod>2023-03-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://iconson.top/tags/test/</loc>
     <lastmod>2023-03-02</lastmod>
     <changefreq>daily</changefreq>
@@ -166,20 +180,6 @@
   
   <url>
     <loc>https://iconson.top/tags/%E4%BB%A3%E7%A0%81%E5%9D%97/</loc>
-    <lastmod>2023-03-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://iconson.top/tags/Java/</loc>
-    <lastmod>2023-03-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://iconson.top/tags/Spring/</loc>
     <lastmod>2023-03-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -223,6 +223,13 @@
   </url>
   
   <url>
+    <loc>https://iconson.top/categories/Java/</loc>
+    <lastmod>2023-03-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://iconson.top/categories/hexo%E9%85%8D%E7%BD%AE/</loc>
     <lastmod>2023-03-02</lastmod>
     <changefreq>daily</changefreq>
@@ -237,7 +244,7 @@
   </url>
   
   <url>
-    <loc>https://iconson.top/categories/Java/</loc>
+    <loc>https://iconson.top/categories/Java/Spring/</loc>
     <lastmod>2023-03-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -245,13 +252,6 @@
   
   <url>
     <loc>https://iconson.top/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/</loc>
-    <lastmod>2023-03-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://iconson.top/categories/Java/Spring/</loc>
     <lastmod>2023-03-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>

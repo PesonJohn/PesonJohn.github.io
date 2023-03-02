@@ -1,64 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>浅记I/O多路复用</title>
-    <url>/%E6%B5%85%E8%AE%B0I-O%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/</url>
-    <content><![CDATA[<p>​	传统的I/O模型是一种1对1的模型，即单个进程只在单个文件描述符上进行I/O操作，如果读缓冲区为空或者写缓冲区满，那么调用<code>read()</code>或者<code>write()</code>时就会阻塞直到有数据可读或者有空间可写。如果一个服务端连接了多个客户端，某个客户端在进行I/O时发生了阻塞，那么别的客户端就也需要等待，这样就造成了很大的影响，所以就希望能以非阻塞的方式进行I/O，即如果我们的I/O调用不能立刻完成的话，就返回错误而不是阻塞进程去等待。很容易地就想到采用多进程的方式，但是为父进程为每个文件描述符或者每个客户端fork一个子进程的话，又需要花费很多的资源，而且进程上下文的切换涉及到用户空间的和内核空间资源的切换，维护的代价也很大。<span id="more"></span>既然多进程模型过重的话我们呀很容易再去考虑比进程轻量许多的多线程模型，服务端每与一个客户端连接时，就会通过<code>pthread_create()</code>函数来创建线程，将<code>已连接socket</code>的文件描述符传递给线程，通过这个线程来与客户端进行通信。虽然线程所消耗的资源没有进程多，但是如果连接很多的话，频繁的线程创建销毁及上下文切换也是会造成不小的系统开销的，虽然可以通过<strong>线程池</strong>来维护线程的创建销毁，但是为了避免线程之间的竞争在操作的时候又需要加锁，这又会使得编程的工作变的复杂许多。</p>
-<h2 id="I-O多路复用">I/O多路复用</h2>
-<p>​	基于上面的问题，就有了I/O多路复用这么一个模型出来。简单的来说，I/O多路复用就是让一个进程同时监听多个socket，也就是允许进程同时检查多个文件描述符来找出是否有可执行I/O操作的。而比较经典的I/O多路复用接口便是<code>select()</code>、<code>poll()</code>和<code>epoll()</code>，其中epoll()是Linux2.6版本之后专有的。</p>
-<h3 id="select">select()</h3>
-<p>​	select()函数实现多路复用的方式是：将用户态里的一组文件描述符集合拷贝到内核中，在内核中检查是否有事件发生，如果发生的话就把对应事件的文件描述符标记为就绪，当整个集合遍历完并且修改完后便把这组文件描述符集合再拷贝到用户空间中，然后在用户空间中去遍历这组文件描述符来看哪些是就绪的。可以看到一个select()方法就要涉及到<strong>2次的文件描述符集合遍历</strong>和<strong>2次文件描述符集合拷贝</strong>了。select()方法函数定义如下：</p>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">select</span><span class="params">(<span class="keyword">int</span> nfds,fd_set *readfds,fd_set *wrtiefds,fd_set *exceptfds,struct timeval *timeout)</span></span>;</span><br><span class="line"><span class="comment">//readfds 是用来检测输入是否就绪的文件描述符集合。</span></span><br><span class="line"><span class="comment">//writefds 是用来检测输出是否就绪的文件描述符集合。</span></span><br><span class="line"><span class="comment">//exceptfds 是用来检测异常情况是否发生的文件描述符集合。</span></span><br><span class="line"><span class="comment">//nfds是比上面这3个文件描述符集合中所包含的最大文件描述符号还要大1的数。该参</span></span><br><span class="line"><span class="comment">//数使内核就不用去检查大于这个值的文件描述符号是否属于这些文件描述符集合。</span></span><br></pre></td></tr></table></figure></div>
-<p>​	在<strong>每次调用select时，都需要初始化fd_set</strong>。</p>
-<p>​	select返回0时代表调用超时，返回-1时代表有错误发生，返回一个正整数代表有一个或者多个文件描述符就绪，如果一个文件描述符存在于多个文件描述符集合的话就会被统计多次。还有文件描述符集合的上限通常是1024。</p>
-<h3 id="poll">poll()</h3>
-<p>​	poll()执行的任务和select是很相似的，区别在于poll()是通过一组文件描述符结构来代替select的三个集合。poll()函数的定义如下：</p>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">poll</span><span class="params">(struct pollfd fds[],<span class="keyword">nfds_t</span> nfds,<span class="keyword">int</span> timeout)</span></span>;</span><br><span class="line"><span class="comment">//fds列出了我们需要poll()来检查的文件描述符。该参数为pollfd 结构体数组</span></span><br><span class="line"><span class="comment">//参数nfds 指定了数组fds 中元素的个数。数据类型nfds_t 实际为无符号整形。</span></span><br></pre></td></tr></table></figure></div>
-<p>pollfd的结构如下：</p>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span>{</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="keyword">short</span> events;</span><br><span class="line">    <span class="keyword">short</span> revents;</span><br><span class="line">};</span><br></pre></td></tr></table></figure></div>
-<p>上面的events和revents都是位掩码。调用者初始化events 来指定需要为描述符fd 做检查的事件。当poll()返回时，revents 被设定以此来表示该文件描述符上实际发生的事件。</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915122617255.png" alt="image-20220915122617255"></p>
-<p>​	poll返回正整数时表示有1 个或多个文件描述符处于就绪态了。返回值表示数组fds 中拥有非零revents 字段的pollfd 结构体数量。</p>
-<p>​	poll和select一样，只会告诉我们<strong>I/O操作是否会阻塞</strong>，而不是告诉我们到底能否成功传输数据。而且poll也是跟select一样要在用户态和内核态之间拷贝文件描述符集合和线性地遍历哪个文件描述符就绪。当并发数量上去之后，所消耗的时间也会线性地增长，占用CPU的时间也就越多，而造成这两个方法性能不好的原因是它们API设计的局限性：程序重复调用这些系统调用所检查的文件描述符集合都是相同的，可是<strong>内核并不会在每次调用成功后就记录下它们</strong>。poll与select相比，就是没有了文件描述符集合大小的上限，不过随着要检查的文件描述符越多，poll的数据结构也就越大，也就占用更多的CPU时间。</p>
-<h3 id="epoll">epoll()</h3>
-<p>​	针对select和poll的问题，epoll便解决了他们的问题。epoll提供了三个函数，这三个函数分别是<code>epoll_create()</code>、<code>epoll_ctl()</code>和<code>epoll_wait()</code>：</p>
-<p>epoll_create:</p>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//创建一个epoll实例，返回值是这个epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//Linux2.6.8版本之前该方法有一个参数size来告诉内核应该如何为内部数据结构划分初始大小</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_create</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure></div>
-<p>​	用户调用该函数时，内核会创建一个struct eventpoll内核对象，并把它关联到当前进程的已打开的文件列表中。这个eventpoll对象有这么三个成员：</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915211541276.png" alt="image-20220915211541276"></p>
-<p>epoll_ctl:</p>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//修改由文件描述符epfd所代表的epoll实例中的兴趣列表。</span></span><br><span class="line"><span class="comment">//epfd：epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//op：执行的操作，有EPOLL_CTL_ADD、EPOLL_CTL_MOD和EPOLL_CTL_DEL</span></span><br><span class="line"><span class="comment">//fd：所要操作的文件描述符</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_ctl</span><span class="params">(<span class="keyword">int</span> epfd,<span class="keyword">int</span> op,<span class="keyword">int</span> fd,struct epoll_event *ev)</span></span>;</span><br></pre></td></tr></table></figure></div>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span>{</span></span><br><span class="line">    <span class="keyword">uint32_t</span> events; <span class="comment">//事件掩码</span></span><br><span class="line">    <span class="keyword">epoll_data_t</span> data; <span class="comment">//文件描述符fd的消息</span></span><br><span class="line">}</span><br></pre></td></tr></table></figure></div>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">union</span> <span class="title">epoll_data</span>{</span></span><br><span class="line">    <span class="keyword">void</span> *ptr; <span class="comment">//指向用户自定义的数据</span></span><br><span class="line">    <span class="keyword">int</span> fd; <span class="comment">//注册的文件描述符</span></span><br><span class="line">    <span class="keyword">uint32_t</span> u32;</span><br><span class="line">    <span class="keyword">uint64_t</span> u64;</span><br><span class="line">}<span class="keyword">epoll_data_t</span>;</span><br></pre></td></tr></table></figure></div>
-<p>​	调用<code>epoll_ctl()</code>函数注册socket时，以添加监视socket为例子，内核会分配一个红黑树节点，然后将所要等待的事件添加到这个socket的等待队列中，并且设置了回调函数<code>ep_poll_callback()</code>，最后将分配好的红黑树节点插入到红黑树中，也就是epoll实例的兴趣列表。上面的回调函数的主要功能是所监视的socket所等待的事件发生时，会将其在兴趣列表上对应的实例添加到就绪链表中，就绪链表不为空时就会唤醒等待着就绪链表的进程，其调用的epoll_wait也就能继续执行下去。</p>
-<p>epoll_wait:</p>
-<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//阻塞等待所监视的文件描述符的事件发生，返回就绪的数目，并且将发生的事件写到evlist中</span></span><br><span class="line"><span class="comment">//epfd：epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//evlist：有关就绪态文件描述符的信息。数组evlist 的空间由调用者负责申请，所包含的元素个数在参数maxevents 中指定。</span></span><br><span class="line"><span class="comment">//maxevents：返回的就绪events的最大数目</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_wait</span><span class="params">(<span class="keyword">int</span> epfd,struct epoll_event *evlist,<span class="keyword">int</span> maxevents,<span class="keyword">int</span> timeout)</span></span>;</span><br></pre></td></tr></table></figure></div>
-<p>​	<strong>epoll_wait是阻塞</strong>的，当就绪链表没有数据时epoll_wait就会阻塞着去等待，直到超时或者就绪链表非空才继续执行。	就像上面说的epoll有两个存储实例的结构：兴趣列表和就绪链表。<code>epoll_ctl()</code>函数则是负责把所要监视的socket加入到兴趣列表，或者是修改其在兴趣列表里的状态，亦或者是将其从兴趣列表删除。<strong>兴趣列表</strong>的结构是一个<strong>红黑树</strong>，红黑树是一个高效率的数据结构，红黑树能让 epoll 在<strong>查找效率、插入效率、内存开销等等多个方面比较均衡</strong>，增删改的时间复杂度通常为O(logn)，而且这颗红黑树是维护在<strong>内核中</strong>的，也就是我们并不需要将其在用户态和内核态之间拷贝来拷贝去的，只需要传入待监视的socket进去就行。就绪链表是一个<strong>双链表</strong>，epoll_wait在检测到就绪事件后就会把最多<strong>maxevents个</strong>就绪事件从内核复制到用户空间中，也就是复制到所传入进来的evlist中。这样系统所遍历的返回的文件描述符都是就绪的，比select和poll遍历全部文件描述符集合高效了许多。上面的过程用一张简单的图来描述就是如下这样：</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915214425308.png" alt="image-20220915214425308"></p>
-<p>​	基于epoll的特点，<strong>epoll</strong>的应用场景是在<strong>大量的连接需要监视</strong>但只有<strong>少数的文件描述符处于就绪状态</strong>的情况，这是由于epoll采用的是事件触发机制，如果<strong>大量的连接要处于就绪状态，就会大量地调用回调函数</strong>，回调的过程中又会涉及到兴趣列表(或者说被监视的socket列表)的遍历，这样操作的话效率就不如select和poll直接遍历整个文件描述符集合来获取就绪文件描述符了。相对的说，<strong>select和poll</strong>的应用场景就是<strong>少量的连接但大部分连接都是处于就绪状态</strong>的情况。</p>
-<h3 id="事件触发">事件触发</h3>
-<h4 id="边缘触发-ET——Edge-Trigger">边缘触发(ET——Edge Trigger)</h4>
-<p>​	当监控的socket上有事件发生时，服务端只会在epoll_wait中苏醒一次收到通知，即使进程没有read读缓冲区或者write写缓冲区，也不会再次通知，<strong>直到该socket的下一个事件发生</strong>。采用边缘触发时，要让程序尽可能地在对应的文件描述符上去执行I/O，比如尽可能地读取字节，所以我们就会<strong>循环</strong>地在文件描述符上执行I/O，如果文件描述符是阻塞的，在没有数据可读写时就会阻塞，程序无法继续进行下去，这也就是为什么<strong>边缘触发通常配合非阻塞I/O</strong>来使用，使文件描述符在得到通知后重复执行I/O操作直到相应系统调用以错误码<strong>EAGAIN</strong>或者<strong>EWOULDBLOCK</strong>的形式失败。</p>
-<h4 id="水平触发-LT——Level-Trigger">水平触发(LT——Level Trigger)</h4>
-<p>​	当监控的socket有事件发生而且可以非阻塞地进行I/O调用时，服务端就会在epoll_wait中<strong>不断地苏醒收到通知，直到内核缓冲区的数据读写完毕</strong>。也就是说我们可以在任意时刻检查I/O状态，而且没有必要在文件描述符就绪后尽可能多地执行I/O操作，甚至不进行I/O操作。</p>
-<p>​	边缘触发的效率是比水平触发的效率高的，因为<strong>边缘触发下系统不会充斥着大量不关心的就绪文件描述符</strong>，在很大程度上降低了同一个epoll事件被重复触发的次数。select和poll只支持水平触发，而epoll支持边缘触发，但是<strong>epoll默认的触发机制是水平触发</strong>，如果要使用边缘触发，就要在调用<code>epoll_ctl()</code>注册时在其epoll_event结构中将events字段指定为<strong>EPOLLET</strong>。</p>
-<p>I/O多路复用的整理大概就是这些了，I/O多路复用涉及到的应用其实还是挺多的，就比如Redis，基于内存操作的Redis的瓶颈在网络I/O和内存大小，单线程的Redis通过I/O多路复用监听多个socket从而实现一个Redis线程处理多个I/O流的效果。如果对epoll源码感兴趣的，也可以自行去尝试阅读下，链接：<a class="link" href="https://github.com/torvalds/linux/blob/master/fs/eventpoll.c%E3%80%82">https://github.com/torvalds/linux/blob/master/fs/eventpoll.c。 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-<h2 id="参考">参考</h2>
-<blockquote>
-<ul>
-<li><a class="link" href="https://xiaolincoding.com/os/8_network_system/selete_poll_epoll.html">I/O 多路复用：select/poll/epoll <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
-<li><a class="link" href="https://blog.csdn.net/u010429831/article/details/118600310">I/O多路复用的实现机制 - epoll 用法总结 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
-<li><a class="link" href="https://www.cnblogs.com/zhangyjblogs/p/15862358.html">IO多路复用原理&amp;场景  <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
-<li><a class="link" href="https://mp.weixin.qq.com/s?__biz=MjM5Njg5NDgwNA==&amp;mid=2247484905&amp;idx=1&amp;sn=a74ed5d7551c4fb80a8abe057405ea5e&amp;chksm=a6e304d291948dc4fd7fe32498daaae715adb5f84ec761c31faf7a6310f4b595f95186647f12&amp;scene=21#wechat_redirect">图解 | 深入揭秘 epoll 是如何实现 IO 多路复用的！ <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
-</ul>
-</blockquote>
+    <title>JAVA均匀生成随机数</title>
+    <url>/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/</url>
+    <content><![CDATA[<h2 id="公式推导">公式推导</h2>
+<p>假如有一个函数rand2()会均匀生成[1,2]的随机数，现在想要实现一个rand4()的函数，第一次接触该类问题时，第一反应是如下所示：</p>
+<div class="highlight-container" data-rel="Tap"><figure class="iseeu highlight tap"><table><tr><td class="code"><pre><span class="line">rand2() + rand2() = ? ==&gt; [2,4]</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 2 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 2 </span>    = 4</span><br><span class="line"></span><br><span class="line">// 为了把生成随机数的范围规约成[1,n]，于是在上一步的结果后减1</span><br><span class="line">(rand2()-1) + rand2() = ? ==&gt; [1,3]</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 2 </span>    = 3</span><br></pre></td></tr></table></figure></div>
+<span id="more"></span>
+<p>会发现生成的数字不是等概率的，造成这种情况的原因也很明显，有些数字是可以通过几个组合得来，有的只能通过一种组合得来</p>
+<p>若我们把(rand2()-1)乘以2，则会得到</p>
+<div class="highlight-container" data-rel="Tap"><figure class="iseeu highlight tap"><table><tr><td class="code"><pre><span class="line">(rand2()-1) ×<span class="number"> 2 </span>+ rand2() = ?</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 2 </span>    = 4</span><br></pre></td></tr></table></figure></div>
+<p>得到的结果恰好是等概率的。我们可以通过这种方法实现rand2()-&gt;rand4()</p>
+<p>我们再举个例子：有两个均匀随机函数rand9()和rand7()，a=(rand9-1)*7，b = rand7，result = a+b</p>
+<p>则能得到下列表格的结果：</p>
+<table>
+<thead>
+<tr>
+<th>a\b</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+</tr>
+<tr>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+<td>11</td>
+<td>12</td>
+<td>13</td>
+<td>14</td>
+</tr>
+<tr>
+<td>14</td>
+<td>15</td>
+<td>16</td>
+<td>17</td>
+<td>18</td>
+<td>19</td>
+<td>20</td>
+<td>21</td>
+</tr>
+<tr>
+<td>21</td>
+<td>22</td>
+<td>23</td>
+<td>24</td>
+<td>25</td>
+<td>26</td>
+<td>27</td>
+<td>28</td>
+</tr>
+<tr>
+<td>28</td>
+<td>29</td>
+<td>30</td>
+<td>31</td>
+<td>32</td>
+<td>33</td>
+<td>34</td>
+<td>35</td>
+</tr>
+<tr>
+<td>35</td>
+<td>36</td>
+<td>37</td>
+<td>38</td>
+<td>39</td>
+<td>40</td>
+<td>41</td>
+<td>42</td>
+</tr>
+<tr>
+<td>42</td>
+<td>43</td>
+<td>44</td>
+<td>45</td>
+<td>46</td>
+<td>47</td>
+<td>48</td>
+<td>49</td>
+</tr>
+<tr>
+<td>49</td>
+<td>50</td>
+<td>51</td>
+<td>52</td>
+<td>53</td>
+<td>54</td>
+<td>55</td>
+<td>56</td>
+</tr>
+<tr>
+<td>56</td>
+<td>57</td>
+<td>58</td>
+<td>59</td>
+<td>60</td>
+<td>61</td>
+<td>62</td>
+<td>63</td>
+</tr>
+</tbody>
+</table>
+<p>可以看到这样也可以均匀随机的生成[1,63]的随机数，则可以得到这样的一个规律：</p>
+<div class="highlight-container" data-rel="Reasonml"><figure class="iseeu highlight reasonml"><table><tr><td class="code"><pre><span class="line">已知 rand<span class="constructor">_N()</span> 可以等概率的生成<span class="literal">[<span class="number">1</span>, N]</span>范围的随机数</span><br><span class="line">那么：</span><br><span class="line">(rand<span class="constructor">_X()</span> - <span class="number">1</span>) × Y + rand<span class="constructor">_Y()</span> ==&gt; 可以等概率的生成<span class="literal">[<span class="number">1</span>, X <span class="operator">*</span> Y]</span>范围的随机数</span><br><span class="line">即实现了 rand_X*<span class="constructor">Y()</span></span><br></pre></td></tr></table></figure></div>
+<p>公式：<br>
+<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="72.27ex" height="2.262ex" role="img" focusable="false" viewbox="0 -750 31943.5 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(389,0)"><path data-c="1D45F" d="M21 287Q22 290 23 295T28 317T38 348T53 381T73 411T99 433T132 442Q161 442 183 430T214 408T225 388Q227 382 228 382T236 389Q284 441 347 441H350Q398 441 422 400Q430 381 430 363Q430 333 417 315T391 292T366 288Q346 288 334 299T322 328Q322 376 378 392Q356 405 342 405Q286 405 239 331Q229 315 224 298T190 165Q156 25 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 114 189T154 366Q154 405 128 405Q107 405 92 377T68 316T57 280Q55 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="mi" transform="translate(840,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mi" transform="translate(1369,0)"><path data-c="1D45B" d="M21 287Q22 293 24 303T36 341T56 388T89 425T135 442Q171 442 195 424T225 390T231 369Q231 367 232 367L243 378Q304 442 382 442Q436 442 469 415T503 336T465 179T427 52Q427 26 444 26Q450 26 453 27Q482 32 505 65T540 145Q542 153 560 153Q580 153 580 145Q580 144 576 130Q568 101 554 73T508 17T439 -10Q392 -10 371 17T350 73Q350 92 386 193T423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 180T152 343Q153 348 153 366Q153 405 129 405Q91 405 66 305Q60 285 60 284Q58 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="msub" transform="translate(1969,0)"><g data-mml-node="mi"><path data-c="1D451" d="M366 683Q367 683 438 688T511 694Q523 694 523 686Q523 679 450 384T375 83T374 68Q374 26 402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487H491Q506 153 506 145Q506 140 503 129Q490 79 473 48T445 8T417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157Q33 205 53 255T101 341Q148 398 195 420T280 442Q336 442 364 400Q369 394 369 396Q370 400 396 505T424 616Q424 629 417 632T378 637H357Q351 643 351 645T353 664Q358 683 366 683ZM352 326Q329 405 277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q233 26 290 98L298 109L352 326Z"/></g><g data-mml-node="mi" transform="translate(553,-150) scale(0.707)"><path data-c="1D44B" d="M42 0H40Q26 0 26 11Q26 15 29 27Q33 41 36 43T55 46Q141 49 190 98Q200 108 306 224T411 342Q302 620 297 625Q288 636 234 637H206Q200 643 200 645T202 664Q206 677 212 683H226Q260 681 347 681Q380 681 408 681T453 682T473 682Q490 682 490 671Q490 670 488 658Q484 643 481 640T465 637Q434 634 411 620L488 426L541 485Q646 598 646 610Q646 628 622 635Q617 635 609 637Q594 637 594 648Q594 650 596 664Q600 677 606 683H618Q619 683 643 683T697 681T738 680Q828 680 837 683H845Q852 676 852 672Q850 647 840 637H824Q790 636 763 628T722 611T698 593L687 584Q687 585 592 480L505 384Q505 383 536 304T601 142T638 56Q648 47 699 46Q734 46 734 37Q734 35 732 23Q728 7 725 4T711 1Q708 1 678 1T589 2Q528 2 496 2T461 1Q444 1 444 10Q444 11 446 25Q448 35 450 39T455 44T464 46T480 47T506 54Q523 62 523 64Q522 64 476 181L429 299Q241 95 236 84Q232 76 232 72Q232 53 261 47Q262 47 267 47T273 46Q276 46 277 46T280 45T283 42T284 35Q284 26 282 19Q279 6 276 4T261 1Q258 1 243 1T201 2T142 2Q64 2 42 0Z"/></g></g><g data-mml-node="mo" transform="translate(3174.5,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mo" transform="translate(3563.5,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(4174.7,0)"><path data-c="2212" d="M84 237T84 250T98 270H679Q694 262 694 250T679 230H98Q84 237 84 250Z"/></g><g data-mml-node="mn" transform="translate(5174.9,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g><g data-mml-node="mo" transform="translate(5674.9,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mi" transform="translate(6063.9,0)"><path data-c="D7" d="M630 29Q630 9 609 9Q604 9 587 25T493 118L389 222L284 117Q178 13 175 11Q171 9 168 9Q160 9 154 15T147 29Q147 36 161 51T255 146L359 250L255 354Q174 435 161 449T147 471Q147 480 153 485T168 490Q173 490 175 489Q178 487 284 383L389 278L493 382Q570 459 587 475T609 491Q630 491 630 471Q630 464 620 453T522 355L418 250L522 145Q606 61 618 48T630 29Z"/></g><g data-mml-node="mi" transform="translate(6841.9,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(7827.1,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mi" transform="translate(8827.3,0)"><path data-c="1D45F" d="M21 287Q22 290 23 295T28 317T38 348T53 381T73 411T99 433T132 442Q161 442 183 430T214 408T225 388Q227 382 228 382T236 389Q284 441 347 441H350Q398 441 422 400Q430 381 430 363Q430 333 417 315T391 292T366 288Q346 288 334 299T322 328Q322 376 378 392Q356 405 342 405Q286 405 239 331Q229 315 224 298T190 165Q156 25 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 114 189T154 366Q154 405 128 405Q107 405 92 377T68 316T57 280Q55 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="mi" transform="translate(9278.3,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mi" transform="translate(9807.3,0)"><path data-c="1D45B" d="M21 287Q22 293 24 303T36 341T56 388T89 425T135 442Q171 442 195 424T225 390T231 369Q231 367 232 367L243 378Q304 442 382 442Q436 442 469 415T503 336T465 179T427 52Q427 26 444 26Q450 26 453 27Q482 32 505 65T540 145Q542 153 560 153Q580 153 580 145Q580 144 576 130Q568 101 554 73T508 17T439 -10Q392 -10 371 17T350 73Q350 92 386 193T423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 180T152 343Q153 348 153 366Q153 405 129 405Q91 405 66 305Q60 285 60 284Q58 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="msub" transform="translate(10407.3,0)"><g data-mml-node="mi"><path data-c="1D451" d="M366 683Q367 683 438 688T511 694Q523 694 523 686Q523 679 450 384T375 83T374 68Q374 26 402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487H491Q506 153 506 145Q506 140 503 129Q490 79 473 48T445 8T417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157Q33 205 53 255T101 341Q148 398 195 420T280 442Q336 442 364 400Q369 394 369 396Q370 400 396 505T424 616Q424 629 417 632T378 637H357Q351 643 351 645T353 664Q358 683 366 683ZM352 326Q329 405 277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q233 26 290 98L298 109L352 326Z"/></g><g data-mml-node="mi" transform="translate(553,-150) scale(0.707)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g></g><g data-mml-node="mo" transform="translate(11549.9,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mo" transform="translate(11938.9,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(12605.6,0)"><path data-c="21D2" d="M580 514Q580 525 596 525Q601 525 604 525T609 525T613 524T615 523T617 520T619 517T622 512Q659 438 720 381T831 300T927 263Q944 258 944 250T935 239T898 228T840 204Q696 134 622 -12Q618 -21 615 -22T600 -24Q580 -24 580 -17Q580 -13 585 0Q620 69 671 123L681 133H70Q56 140 56 153Q56 168 72 173H725L735 181Q774 211 852 250Q851 251 834 259T789 283T735 319L725 327H72Q56 332 56 347Q56 360 70 367H681L671 377Q638 412 609 458T580 514Z"/></g><g data-mml-node="mi" transform="translate(13883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">可</text></g><g data-mml-node="mi" transform="translate(14883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">以</text></g><g data-mml-node="mi" transform="translate(15883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">等</text></g><g data-mml-node="mi" transform="translate(16883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">概</text></g><g data-mml-node="mi" transform="translate(17883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">率</text></g><g data-mml-node="mi" transform="translate(18883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">的</text></g><g data-mml-node="mi" transform="translate(19883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">生</text></g><g data-mml-node="mi" transform="translate(20883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">成</text></g><g data-mml-node="mo" transform="translate(21883.4,0)"><path data-c="5B" d="M118 -250V750H255V710H158V-210H255V-250H118Z"/></g><g data-mml-node="mn" transform="translate(22161.4,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g><g data-mml-node="mo" transform="translate(22661.4,0)"><path data-c="2C" d="M78 35T78 60T94 103T137 121Q165 121 187 96T210 8Q210 -27 201 -60T180 -117T154 -158T130 -185T117 -194Q113 -194 104 -185T95 -172Q95 -168 106 -156T131 -126T157 -76T173 -3V9L172 8Q170 7 167 6T161 3T152 1T140 0Q113 0 96 17Z"/></g><g data-mml-node="mi" transform="translate(23106.1,0)"><path data-c="1D44B" d="M42 0H40Q26 0 26 11Q26 15 29 27Q33 41 36 43T55 46Q141 49 190 98Q200 108 306 224T411 342Q302 620 297 625Q288 636 234 637H206Q200 643 200 645T202 664Q206 677 212 683H226Q260 681 347 681Q380 681 408 681T453 682T473 682Q490 682 490 671Q490 670 488 658Q484 643 481 640T465 637Q434 634 411 620L488 426L541 485Q646 598 646 610Q646 628 622 635Q617 635 609 637Q594 637 594 648Q594 650 596 664Q600 677 606 683H618Q619 683 643 683T697 681T738 680Q828 680 837 683H845Q852 676 852 672Q850 647 840 637H824Q790 636 763 628T722 611T698 593L687 584Q687 585 592 480L505 384Q505 383 536 304T601 142T638 56Q648 47 699 46Q734 46 734 37Q734 35 732 23Q728 7 725 4T711 1Q708 1 678 1T589 2Q528 2 496 2T461 1Q444 1 444 10Q444 11 446 25Q448 35 450 39T455 44T464 46T480 47T506 54Q523 62 523 64Q522 64 476 181L429 299Q241 95 236 84Q232 76 232 72Q232 53 261 47Q262 47 267 47T273 46Q276 46 277 46T280 45T283 42T284 35Q284 26 282 19Q279 6 276 4T261 1Q258 1 243 1T201 2T142 2Q64 2 42 0Z"/></g><g data-mml-node="mo" transform="translate(24180.3,0)"><path data-c="2217" d="M229 286Q216 420 216 436Q216 454 240 464Q241 464 245 464T251 465Q263 464 273 456T283 436Q283 419 277 356T270 286L328 328Q384 369 389 372T399 375Q412 375 423 365T435 338Q435 325 425 315Q420 312 357 282T289 250L355 219L425 184Q434 175 434 161Q434 146 425 136T401 125Q393 125 383 131T328 171L270 213Q283 79 283 63Q283 53 276 44T250 35Q231 35 224 44T216 63Q216 80 222 143T229 213L171 171Q115 130 110 127Q106 124 100 124Q87 124 76 134T64 161Q64 166 64 169T67 175T72 181T81 188T94 195T113 204T138 215T170 230T210 250L74 315Q65 324 65 338Q65 353 74 363T98 374Q106 374 116 368T171 328L229 286Z"/></g><g data-mml-node="mi" transform="translate(24902.5,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(25665.5,0)"><path data-c="5D" d="M22 710V750H159V-250H22V-210H119V710H22Z"/></g><g data-mml-node="mi" transform="translate(25943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">范</text></g><g data-mml-node="mi" transform="translate(26943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">围</text></g><g data-mml-node="mi" transform="translate(27943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">的</text></g><g data-mml-node="mi" transform="translate(28943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">随</text></g><g data-mml-node="mi" transform="translate(29943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">机</text></g><g data-mml-node="mi" transform="translate(30943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">数</text></g></g></g></svg></mjx-container></p>
+<h2 id="LC题目-优化">LC题目+优化</h2>
+<h3 id="题目">题目</h3>
+<p>再来看看Leetcode上的这一题：<a class="link" href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/">470. 用 Rand7() 实现 Rand10() <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+<p>要实现rand10()，就需要先实现<code>rand_N()</code>，并且保证N大于10且是10的倍数。这样再通过<code>rand_N() % 10 + 1</code> 就可以得到[1,10]范围的随机数了。</p>
+<p>rand_N()的实现方法可以通过上面推导出来的规律得到：</p>
+<p><code>(rand7()-1) × 7 + rand7()  ==&gt; rand49()</code></p>
+<p>但是这样实现的N不是10的倍数，这该怎么处理？这里就涉及到了“<strong>拒绝采样</strong>”的知识了，也就是说，如果某个采样结果不在要求的范围内，则丢弃它。基于上面的这些分析，再回头看下面的代码，想必是不难理解了。</p>
+<div class="highlight-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>) {</span><br><span class="line">            <span class="keyword">int</span> num = (rand7() - <span class="number">1</span>) * <span class="number">7</span> + rand7(); <span class="comment">// 等概率生成[1,49]范围的随机数</span></span><br><span class="line">            <span class="keyword">if</span>(num &lt;= <span class="number">40</span>) <span class="keyword">return</span> num % <span class="number">10</span> + <span class="number">1</span>; <span class="comment">// 拒绝采样，并返回[1,10]范围的随机数</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></table></figure></div>
+<h3 id="优化">优化</h3>
+<p>根据上面的分析，我们已经知道<code>(rand7() - 1) * 7 + rand7()</code> 等概率生成<code>[1,49]</code>范围的随机数。而由于我们需要的是10的倍数，因此，需要舍弃掉<code>[41, 49]</code>这9个数。优化的点就始于——我们能否利用这些范围外的数字，以减少丢弃的值，提高命中率总而提高随机数生成效率。</p>
+<p>当生成的随机数x在<code>[41,49]</code>时，我们拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,9]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,63]</code>的随机数，若这次生成的随机数在<code>[61,63]</code>时，我们也拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,3]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,21]</code>的随机数，若这次生成的随机数为21，则我们拒绝采样21，但是舍弃的21只能得到1这一个随机数，没有用处，所以我们只能重新生成<code>[1,49]</code>的随机数。代码如下：</p>
+<div class="highlight-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>){</span><br><span class="line">            <span class="keyword">int</span> a = (rand7()-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            <span class="keyword">int</span> b = rand7();</span><br><span class="line">            <span class="keyword">int</span> num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">40</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">40</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">60</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">60</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">20</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></table></figure></div>
+<p>执行效率也比上面快了许多</p>
+<p><img lazyload src="/images/loading.svg" data-src="JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/image-20210905123421344.png" alt="image-20210905123421344"></p>
+<p>保留的数字范围可以通过下面这个公式得到：</p>
+<p>假设有<code>rand_X</code>，想得到<code>rand_Y</code>，<br>
+<code>a = (rand_X()-1)*Y</code>，<code>b = rand_X()</code>;<br>
+则保留范围为：<br>
+<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="21.923ex" height="2.262ex" role="img" focusable="false" viewbox="0 -750 9689.9 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><path data-c="5B" d="M118 -250V750H255V710H158V-210H255V-250H118Z"/></g><g data-mml-node="mn" transform="translate(278,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g><g data-mml-node="mo" transform="translate(778,0)"><path data-c="2C" d="M78 35T78 60T94 103T137 121Q165 121 187 96T210 8Q210 -27 201 -60T180 -117T154 -158T130 -185T117 -194Q113 -194 104 -185T95 -172Q95 -168 106 -156T131 -126T157 -76T173 -3V9L172 8Q170 7 167 6T161 3T152 1T140 0Q113 0 96 17Z"/></g><g data-mml-node="mi" transform="translate(1222.7,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(2207.9,0)"><path data-c="2217" d="M229 286Q216 420 216 436Q216 454 240 464Q241 464 245 464T251 465Q263 464 273 456T283 436Q283 419 277 356T270 286L328 328Q384 369 389 372T399 375Q412 375 423 365T435 338Q435 325 425 315Q420 312 357 282T289 250L355 219L425 184Q434 175 434 161Q434 146 425 136T401 125Q393 125 383 131T328 171L270 213Q283 79 283 63Q283 53 276 44T250 35Q231 35 224 44T216 63Q216 80 222 143T229 213L171 171Q115 130 110 127Q106 124 100 124Q87 124 76 134T64 161Q64 166 64 169T67 175T72 181T81 188T94 195T113 204T138 215T170 230T210 250L74 315Q65 324 65 338Q65 353 74 363T98 374Q106 374 116 368T171 328L229 286Z"/></g><g data-mml-node="mo" transform="translate(2930.1,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mo" transform="translate(3319.1,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(3708.1,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mo" transform="translate(4459.3,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mi" transform="translate(5459.6,0)"><path data-c="1D44F" d="M73 647Q73 657 77 670T89 683Q90 683 161 688T234 694Q246 694 246 685T212 542Q204 508 195 472T180 418L176 399Q176 396 182 402Q231 442 283 442Q345 442 383 396T422 280Q422 169 343 79T173 -11Q123 -11 82 27T40 150V159Q40 180 48 217T97 414Q147 611 147 623T109 637Q104 637 101 637H96Q86 637 83 637T76 640T73 647ZM336 325V331Q336 405 275 405Q258 405 240 397T207 376T181 352T163 330L157 322L136 236Q114 150 114 114Q114 66 138 42Q154 26 178 26Q211 26 245 58Q270 81 285 114T318 219Q336 291 336 325Z"/></g><g data-mml-node="msub" transform="translate(5888.6,0)"><g data-mml-node="mo"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="TeXAtom" transform="translate(422,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mi"><path data-c="1D45A" d="M21 287Q22 293 24 303T36 341T56 388T88 425T132 442T175 435T205 417T221 395T229 376L231 369Q231 367 232 367L243 378Q303 442 384 442Q401 442 415 440T441 433T460 423T475 411T485 398T493 385T497 373T500 364T502 357L510 367Q573 442 659 442Q713 442 746 415T780 336Q780 285 742 178T704 50Q705 36 709 31T724 26Q752 26 776 56T815 138Q818 149 821 151T837 153Q857 153 857 145Q857 144 853 130Q845 101 831 73T785 17T716 -10Q669 -10 648 17T627 73Q627 92 663 193T700 345Q700 404 656 404H651Q565 404 506 303L499 291L466 157Q433 26 428 16Q415 -11 385 -11Q372 -11 364 -4T353 8T350 18Q350 29 384 161L420 307Q423 322 423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 181Q151 335 151 342Q154 357 154 369Q154 405 129 405Q107 405 92 377T69 316T57 280Q55 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="mi" transform="translate(878,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mi" transform="translate(1407,0)"><path data-c="1D465" d="M52 289Q59 331 106 386T222 442Q257 442 286 424T329 379Q371 442 430 442Q467 442 494 420T522 361Q522 332 508 314T481 292T458 288Q439 288 427 299T415 328Q415 374 465 391Q454 404 425 404Q412 404 406 402Q368 386 350 336Q290 115 290 78Q290 50 306 38T341 26Q378 26 414 59T463 140Q466 150 469 151T485 153H489Q504 153 504 145Q504 144 502 134Q486 77 440 33T333 -11Q263 -11 227 52Q186 -10 133 -10H127Q78 -10 57 16T35 71Q35 103 54 123T99 143Q142 143 142 101Q142 81 130 66T107 46T94 41L91 40Q91 39 97 36T113 29T132 26Q168 26 194 71Q203 87 217 139T245 247T261 313Q266 340 266 352Q266 380 251 392T217 404Q177 404 142 372T93 290Q91 281 88 280T72 278H58Q52 284 52 289Z"/></g></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7759.9,0)"><g data-mml-node="mo"><path data-c="2F" d="M423 750Q432 750 438 744T444 730Q444 725 271 248T92 -240Q85 -250 75 -250Q68 -250 62 -245T56 -231Q56 -221 230 257T407 740Q411 750 423 750Z"/></g></g><g data-mml-node="mi" transform="translate(8259.9,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(9022.9,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(9411.9,0)"><path data-c="5D" d="M22 710V750H159V-250H22V-210H119V710H22Z"/></g></g></g></svg></mjx-container><br>
+返回的数字为：<br>
+<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="21.743ex" height="2.262ex" role="img" focusable="false" viewbox="0 -750 9610.6 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(389,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mo" transform="translate(1140.2,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mi" transform="translate(2140.4,0)"><path data-c="1D44F" d="M73 647Q73 657 77 670T89 683Q90 683 161 688T234 694Q246 694 246 685T212 542Q204 508 195 472T180 418L176 399Q176 396 182 402Q231 442 283 442Q345 442 383 396T422 280Q422 169 343 79T173 -11Q123 -11 82 27T40 150V159Q40 180 48 217T97 414Q147 611 147 623T109 637Q104 637 101 637H96Q86 637 83 637T76 640T73 647ZM336 325V331Q336 405 275 405Q258 405 240 397T207 376T181 352T163 330L157 322L136 236Q114 150 114 114Q114 66 138 42Q154 26 178 26Q211 26 245 58Q270 81 285 114T318 219Q336 291 336 325Z"/></g><g data-mml-node="mo" transform="translate(2569.4,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mspace" transform="translate(2958.4,0)"/><g data-mml-node="mo" transform="translate(3958.4,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(4347.4,0)"><path data-c="6D" d="M41 46H55Q94 46 102 60V68Q102 77 102 91T102 122T103 161T103 203Q103 234 103 269T102 328V351Q99 370 88 376T43 385H25V408Q25 431 27 431L37 432Q47 433 65 434T102 436Q119 437 138 438T167 441T178 442H181V402Q181 364 182 364T187 369T199 384T218 402T247 421T285 437Q305 442 336 442Q351 442 364 440T387 434T406 426T421 417T432 406T441 395T448 384T452 374T455 366L457 361L460 365Q463 369 466 373T475 384T488 397T503 410T523 422T546 432T572 439T603 442Q729 442 740 329Q741 322 741 190V104Q741 66 743 59T754 49Q775 46 803 46H819V0H811L788 1Q764 2 737 2T699 3Q596 3 587 0H579V46H595Q656 46 656 62Q657 64 657 200Q656 335 655 343Q649 371 635 385T611 402T585 404Q540 404 506 370Q479 343 472 315T464 232V168V108Q464 78 465 68T468 55T477 49Q498 46 526 46H542V0H534L510 1Q487 2 460 2T422 3Q319 3 310 0H302V46H318Q379 46 379 62Q380 64 380 200Q379 335 378 343Q372 371 358 385T334 402T308 404Q263 404 229 370Q202 343 195 315T187 232V168V108Q187 78 188 68T191 55T200 49Q221 46 249 46H265V0H257L234 1Q210 2 183 2T145 3Q42 3 33 0H25V46H41Z"/><path data-c="6F" d="M28 214Q28 309 93 378T250 448Q340 448 405 380T471 215Q471 120 407 55T250 -10Q153 -10 91 57T28 214ZM250 30Q372 30 372 193V225V250Q372 272 371 288T364 326T348 362T317 390T268 410Q263 411 252 411Q222 411 195 399Q152 377 139 338T126 246V226Q126 130 145 91Q177 30 250 30Z" transform="translate(833,0)"/><path data-c="64" d="M376 495Q376 511 376 535T377 568Q377 613 367 624T316 637H298V660Q298 683 300 683L310 684Q320 685 339 686T376 688Q393 689 413 690T443 693T454 694H457V390Q457 84 458 81Q461 61 472 55T517 46H535V0Q533 0 459 -5T380 -11H373V44L365 37Q307 -11 235 -11Q158 -11 96 50T34 215Q34 315 97 378T244 442Q319 442 376 393V495ZM373 342Q328 405 260 405Q211 405 173 369Q146 341 139 305T131 211Q131 155 138 120T173 59Q203 26 251 26Q322 26 373 103V342Z" transform="translate(1333,0)"/></g><g data-mml-node="mspace" transform="translate(6236.4,0)"/><g data-mml-node="mi" transform="translate(6736.1,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(7499.1,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(8110.3,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mn" transform="translate(9110.6,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g></g></g></svg></mjx-container><br>
+参考题解链接：<a class="link" href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/solution/cong-zui-ji-chu-de-jiang-qi-ru-he-zuo-dao-jun-yun-/">从最基础的讲起如何做到均匀的生成随机数 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
 ]]></content>
       <categories>
-        <category>操作系统</category>
+        <category>JAVA</category>
       </categories>
       <tags>
-        <tag>操作系统</tag>
-        <tag>I/O多路复用</tag>
+        <tag>JAVA</tag>
+        <tag>算法</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Mysql慢查询——查询优化</title>
+    <url>/Mysql%E6%85%A2%E6%9F%A5%E8%AF%A2%E2%80%94%E2%80%94%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</url>
+    <content><![CDATA[<p>在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：<code>对于SQL查询慢的问题你要怎么去发现和解决</code>。最初我也大概只能回答个索引相关的，比如"通过EXPLAIN查看查询的访问类型和一些查询情况"， "查看是否可以在某些表的字段增加索引然后改写查询语句"等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这篇文章便是我针对这本书第六章内容的一些整理总结(其实就是相当于摘抄吧 😤 )。方便自己记忆的同时也放到博客上来给博客更新一下(其实是都放到本地没怎么上传到博客，属于是懒🐶了)</p>
+<span id="more"></span>
+<h2 id="为什么查询慢">为什么查询慢</h2>
+<p>​	在我们看待这个问题的时候，我们就要想：是什么造成SQL的查询慢呢，通过对索引的学习我们也知道索引对于高性能的重要性，但光有索引也是不够的，查询语句的合理性也是要考虑的，如果一个查询语句写的很烂，即使我们的表结构和索引设计的再好，那也是无济于事的。</p>
+<p>​	查询的生命周期大致可以这么来看：客户端发送请求到服务器👉服务器进行解析👉生成执行计划👉<strong>执行</strong>👉返回结果给客户端。一个查询会在一个生命周期内涉及到这些个任务，而每个任务的完成时间也是不同的。我们可以针对这么一个大概的生命周期概念，来对我们的查询进行一个优化。</p>
+<h2 id="优化查询访问">优化查询访问</h2>
+<p>​	查询性能低一个最基本的原因是我们访问的数据太多，针对查询数据多这一问题，我们可以看看是否有存在这么两个问题：<code>是否查询了很多我们不需要的数据</code>；<code>MySQL的服务器是否在分析大量超过我们需要的数据</code>。</p>
+<h3 id="是否查询了很多不需要的数据">是否查询了很多不需要的数据</h3>
+<p>​	我们通常会认为MySQL返回的是我们需要的数据，但实际上MySQL是<strong>先返回全部的结果集再进行计算</strong>，所以我们有时候要考虑我们是否真的需要这么多数据呢，就好像我们要让一个页面显示10条数据，我们就要先查个100条数据然后再选前10条展示吗，显而易见是不用的，我们加个 limit 即可。</p>
+<p>​	对于<code>select *</code>的写法我们也要在使用的时候去想我们是否真的需要去使用它呢，对于一些开发者来说，在知道其性能影响的情况下，这样的写法可以简易开发和做到代码复用，是值得考虑的。<code>select *</code>会使得优化器无法完成<strong>索引覆盖扫描</strong>这类的优化，也会给服务器带来额外的IO、内存和CPU的消耗，在不需要<code>select *</code>的时候它便会给我们造成本没有的性能影响了。</p>
+<p>​	也有这么一种容易发生的情况，就是我们多次重复执行了相同的执行并且返回相同的数据，对于这样的数据，我们可以在第一次查询该数据时将其缓存起来，这样后面再需要时直接从缓存中获取即可。</p>
+<h3 id="MySQL是否分析扫描额外的数据">MySQL是否分析扫描额外的数据</h3>
+<p>​	当我们确认我们查询返回的确实是我们需要的数据后，我们就应该看看查询为了返回结果是否扫描了过多的数据。通常简单的衡量查询开销的指标是：<code>响应时间</code>,<code>扫描行数</code>,<code>返回行数</code>，这三个指标都记录在了MySQL的<strong>慢日志</strong>中，所以<strong>检查慢日志记录是扫描行数过多的查询的好办法</strong>。</p>
+<p>​	如果我们的查询扫描了大量的数据却只返回很少的行，可以考虑如下的优化方式：</p>
+<ul>
+<li>使用<strong>索引覆盖扫描</strong>，使存储引擎不需要回表即可返回结果</li>
+<li>改变库表结构</li>
+<li>重写这个复杂查询</li>
+</ul>
+<h2 id="重构查询方式">重构查询方式</h2>
+<p>​	如果我们的查询的列确实是需要的，索引的设计和库表的设计也没什么问题的时候，那么就可以考虑下更改我们的查询方式。对于一个大查询，我们可以考虑对它进行<code>分而治之</code>的方法来进行多个小查询。对于一些关联查询，我们也考虑是不是能对它进行<strong>分解</strong>，就像书上的例子那样：</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png" alt="image-20220817170821072"></p>
+<p>​	这样可以让缓存的效率更高，因为有缓存，我们可能可以跳过某条查询或者减少IN()里的内容。也可以减少了锁的竞争。这样的查询也可能能提升查询效率，<code>IN()</code>让MySQL按照ID顺序进行查询，顺序IO是要比随机IO高效的。这样还可以减少冗余记录的查询，在数据库上关联查询我们就可能需要重复访问同一数据，在应用层上进行关联让我们可以对某条数据只查询一次，减少了网络和内存的消耗。</p>
+<p>上面所讲的是针对查询的访问和方式，但如果知道MySQL如何优化和执行查询时，那我们在优化查询时便可以按照一些原则让优化器能按我们设想的方向运行。下面这张图是发送一个请求时MySQL所做的事情：</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817172702465.png" alt="image-20220817172702465"></p>
+<p>图中的<code>查询缓存</code>在MySQL8已经是关闭的了，《高性能MySQL》所基于的版本还是5版本的，所以如果是8版本或以上的是可以忽略掉查询缓存的。书上在<code>查询优化</code>做了很多的篇幅进行讲解，讲了很多优化器在一些查询上的优化细节和做法，这部分如果放上来记录的话篇幅还是挺长的，多到我也不知道怎么整理写上了比较好，所以第六章的查询优化处理这块还是很建议大家去阅读原书的，在这里我就先不写着了。</p>
+<h2 id="总结">总结</h2>
+<p>​	一个高性能的查询，需要好的库表设计、索引设计、查询语句设计和查询的优化方式，而查询的优化设计又是很多细节的，所以当SQL查询慢的原因是由于我们查询语句设计不妥当时，便可以照着该书籍第六章的方法去进行优化。</p>
+<p>​	通过网上资料的搜索SQL查询慢的原因也可能不在于查询语句的问题，比如网络不好的情况下，客户端和服务端之间的连接和传输受到影响、IO吞吐量小、缓存不够、出现死锁等等，硬件软件都会或多或少的影响到查询，还是要针对特定的原因去寻找对应的解决办法的。对于我个人来说，排插SQL查询慢的基本方向是通过查询<strong>慢日志</strong>来定位慢查询SQL，然后通过<strong>explain</strong>命令去分析该SQL的执行计划后进行相应的优化，如果优化完还是查询慢或者没有什么优化方向后，就再去考虑网络、内存、服务器和应用程序设计上的问题。</p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+      <tags>
+        <tag>MySQL</tag>
       </tags>
   </entry>
   <entry>
@@ -108,6 +241,83 @@
       <tags>
         <tag>Java</tag>
         <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在文章中添加图片</title>
+    <url>/TestPage/</url>
+    <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
+<p>贴张图片测试一下能不能成功显示出来：👇</p>
+<p><img lazyload src="/images/loading.svg" data-src="TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
+<span id="more"></span>
+<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
+<p>修改<code>站点配置文件</code></p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+<p>这样在创建文章时，会同样生成一个同名文件夹</p>
+<p><img lazyload src="/images/loading.svg" data-src="TestPage/image-20210507150008908.png" alt="实例"></p>
+<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
+<p><img lazyload src="/images/loading.svg" data-src="TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
+<p><s>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</s></p>
+<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>test</tag>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a class="link" href="https://hexo.io/">Hexo <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a>! This is your very first post. Check <a class="link" href="https://hexo.io/docs/">documentation <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> for more info. If you get any problems when using Hexo, you can find the answer in <a class="link" href="https://hexo.io/docs/troubleshooting.html">troubleshooting <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> or you can ask me on <a class="link" href="https://github.com/hexojs/hexo/issues">GitHub <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a>.</p>
+<span id="more"></span>
+<h2 id="Quick-Start">Quick Start</h2>
+<h3 id="Create-a-new-post">Create a new post</h3>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
+<p>More info: <a class="link" href="https://hexo.io/docs/writing.html">Writing <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+<h3 id="Run-server">Run server</h3>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
+<p>More info: <a class="link" href="https://hexo.io/docs/server.html">Server <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+<h3 id="Generate-static-files">Generate static files</h3>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
+<p>More info: <a class="link" href="https://hexo.io/docs/generating.html">Generating <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+<h3 id="Deploy-to-remote-sites">Deploy to remote sites</h3>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
+<p>More info: <a class="link" href="https://hexo.io/docs/one-command-deployment.html">Deployment <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>在文章中添加更新时间</title>
+    <url>/makeUpdTime/</url>
+    <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。</p>
+<span id="more"></span>
+<h2 id="初始方法-不需要">初始方法(不需要)</h2>
+<p><s>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</s></p>
+<p><img lazyload src="/images/loading.svg" data-src="makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
+<p><s>代码如下：</s></p>
+<div class="highlight-container" data-rel="Html"><figure class="iseeu highlight html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
+<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
+<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
+<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
+<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+<p>这样更新时间就能显示出来了。</p>
+<p><img lazyload src="/images/loading.svg" data-src="makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
+<hr>
+<h2 id="现方法">现方法</h2>
+<p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
+<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
+<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
+<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
+<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
       </tags>
   </entry>
   <entry>
@@ -185,6 +395,199 @@
       <tags>
         <tag>动态规划</tag>
         <tag>贪心</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>代码块Mac风格</title>
+    <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
+    <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
+<p><img lazyload src="/images/loading.svg" data-src="%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508161438627.png" alt="image-20210508161438627"></p>
+<span id="more"></span>
+<p>通过 <a class="link" href="https://miaosakurai.com/">樱井喵 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> 的这一篇 <a class="link" href="https://miaosakurai.com/2020/04/20/Hexo-NexT%E7%BE%8E%E5%8C%96%F0%9F%8D%95Mac-Panel%E9%A3%8E%E6%A0%BC%E4%BB%A3%E7%A0%81%E5%9D%97%E9%85%8D%E7%BD%AE/">博客 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> ，直接在 <code>主题配置文件</code>配置一下 <code>codeblock.copy_button.style: mac</code>就行了</p>
+<div class="highlight-container" data-rel="Yaml"><figure class="iseeu highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">copy_button:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">show_result:</span> <span class="literal">true</span></span><br><span class="line">    <span class="comment"># Available values: default | flat | mac</span></span><br><span class="line">    <span class="attr">style:</span> <span class="string">mac</span></span><br></pre></td></tr></table></figure></div>
+<p>要实现上面代码块的样式，我们可以在<code>站点目录\node_modules\highlight.js\styles</code>里发现有许多中css样式(tomorrow-theme也在其中)</p>
+<p><img lazyload src="/images/loading.svg" data-src="%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508160824026.png" alt="image-20210508160824026"></p>
+<p>我们找到<code>主题配置文件</code>中的theme，把light和dark都改成上述文件夹里的某种样式就行了，我用的是tomorrow-night-bright，也就是本文代码块的样式。</p>
+<div class="highlight-container" data-rel="Yaml"><figure class="iseeu highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">theme:</span></span><br><span class="line">    <span class="attr">light:</span> <span class="string">tomorrow-night-bright</span></span><br><span class="line">    <span class="attr">dark:</span> <span class="string">tomorrow-night-bright</span></span><br></pre></td></tr></table></figure></div>
+<p>不过这种会对小代码块也同样生效，暂时我还没找到方法，等待后面找到了我再进行一波更新。</p>
+<p>在报错中我也找到了一个highlight.js的地址：<code>站点目录\themes\next\scripts\events\lib\highlight.js</code></p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+        <tag>代码块</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>创建分支存储源文件</title>
+    <url>/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/</url>
+    <content><![CDATA[<p>为了防止日后出现换电脑的情况而导致自己的配置文件和一些文档消失，所以创建一个分支存放源文件是有必要的，当然你也可以选择存放到云盘，只要你记得更新就是了。创建分支存放的方法其实也不是很复杂。</p>
+<span id="more"></span>
+<h2 id="初始化版本库并与远程仓库关联">初始化版本库并与远程仓库关联</h2>
+<p>一般按照网上方法所创建的博客是没有与远程仓库建立关联的，通过几个git命令来进行关联。</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">//将你的本地文件夹初始化成一个版本库</span><br><span class="line">git init</span><br><span class="line"></span><br><span class="line">//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin</span><br><span class="line">git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></span><br></pre></td></tr></table></figure></div>
+<h2 id="创建并切换分支，提交文件">创建并切换分支，提交文件</h2>
+<p>创建并切换分支：</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">git checkout -b <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
+<p>提交文件：</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">git add .</span><br><span class="line"></span><br><span class="line">git commit -m<span class="string">&quot;源文件&quot;</span></span><br><span class="line"></span><br><span class="line">git push origin <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
+<h2 id="在GitHub中更改新分支为默认分支">在GitHub中更改新分支为默认分支</h2>
+<p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
+<p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
+<p><img lazyload src="/images/loading.svg" data-src="%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
+<p>选中新创分支并点击Update</p>
+<p><img lazyload src="/images/loading.svg" data-src="%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
+<p>它会弹出一个红色的经过，直接sure就行了。</p>
+<h2 id="后续日常管理操作">后续日常管理操作</h2>
+<p>只要你的<code>站点配置文件</code>里deploy的branch是master，在你执行<code>hexo g -d</code>后也同样会更新。在你进行了文章添加修改或修改样式等改动后，通过下面流程进行管理：</p>
+<ol>
+<li>依次执行<code>git add .</code> 、<code>git commit -m&quot;xxx&quot;</code>、<code>git push origin 新创分支名</code>推送到GitHub(注意此时当前分支是你新创的分支)。</li>
+<li>执行<code>hexo g -d</code>发布网站到master分支上</li>
+</ol>
+<p>建议不要调转这两者的顺序</p>
+<h2 id="在其他电脑修改博客">在其他电脑修改博客</h2>
+<p>通过git clone将仓库拉下来(默认分支为你当时新创的分支)</p>
+<p>然后在你copy下来的仓库文件夹通过git bash执行一下指令：<code>npm install hexo</code>、<code>npm install</code>、<code>npm install hexo-deployer-git</code>（不需要<code>hexo init</code>）。</p>
+]]></content>
+      <categories>
+        <category>hexo配置</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>浅记I/O多路复用</title>
+    <url>/%E6%B5%85%E8%AE%B0I-O%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/</url>
+    <content><![CDATA[<p>​	传统的I/O模型是一种1对1的模型，即单个进程只在单个文件描述符上进行I/O操作，如果读缓冲区为空或者写缓冲区满，那么调用<code>read()</code>或者<code>write()</code>时就会阻塞直到有数据可读或者有空间可写。如果一个服务端连接了多个客户端，某个客户端在进行I/O时发生了阻塞，那么别的客户端就也需要等待，这样就造成了很大的影响，所以就希望能以非阻塞的方式进行I/O，即如果我们的I/O调用不能立刻完成的话，就返回错误而不是阻塞进程去等待。很容易地就想到采用多进程的方式，但是为父进程为每个文件描述符或者每个客户端fork一个子进程的话，又需要花费很多的资源，而且进程上下文的切换涉及到用户空间的和内核空间资源的切换，维护的代价也很大。<span id="more"></span>既然多进程模型过重的话我们呀很容易再去考虑比进程轻量许多的多线程模型，服务端每与一个客户端连接时，就会通过<code>pthread_create()</code>函数来创建线程，将<code>已连接socket</code>的文件描述符传递给线程，通过这个线程来与客户端进行通信。虽然线程所消耗的资源没有进程多，但是如果连接很多的话，频繁的线程创建销毁及上下文切换也是会造成不小的系统开销的，虽然可以通过<strong>线程池</strong>来维护线程的创建销毁，但是为了避免线程之间的竞争在操作的时候又需要加锁，这又会使得编程的工作变的复杂许多。</p>
+<h2 id="I-O多路复用">I/O多路复用</h2>
+<p>​	基于上面的问题，就有了I/O多路复用这么一个模型出来。简单的来说，I/O多路复用就是让一个进程同时监听多个socket，也就是允许进程同时检查多个文件描述符来找出是否有可执行I/O操作的。而比较经典的I/O多路复用接口便是<code>select()</code>、<code>poll()</code>和<code>epoll()</code>，其中epoll()是Linux2.6版本之后专有的。</p>
+<h3 id="select">select()</h3>
+<p>​	select()函数实现多路复用的方式是：将用户态里的一组文件描述符集合拷贝到内核中，在内核中检查是否有事件发生，如果发生的话就把对应事件的文件描述符标记为就绪，当整个集合遍历完并且修改完后便把这组文件描述符集合再拷贝到用户空间中，然后在用户空间中去遍历这组文件描述符来看哪些是就绪的。可以看到一个select()方法就要涉及到<strong>2次的文件描述符集合遍历</strong>和<strong>2次文件描述符集合拷贝</strong>了。select()方法函数定义如下：</p>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">select</span><span class="params">(<span class="keyword">int</span> nfds,fd_set *readfds,fd_set *wrtiefds,fd_set *exceptfds,struct timeval *timeout)</span></span>;</span><br><span class="line"><span class="comment">//readfds 是用来检测输入是否就绪的文件描述符集合。</span></span><br><span class="line"><span class="comment">//writefds 是用来检测输出是否就绪的文件描述符集合。</span></span><br><span class="line"><span class="comment">//exceptfds 是用来检测异常情况是否发生的文件描述符集合。</span></span><br><span class="line"><span class="comment">//nfds是比上面这3个文件描述符集合中所包含的最大文件描述符号还要大1的数。该参</span></span><br><span class="line"><span class="comment">//数使内核就不用去检查大于这个值的文件描述符号是否属于这些文件描述符集合。</span></span><br></pre></td></tr></table></figure></div>
+<p>​	在<strong>每次调用select时，都需要初始化fd_set</strong>。</p>
+<p>​	select返回0时代表调用超时，返回-1时代表有错误发生，返回一个正整数代表有一个或者多个文件描述符就绪，如果一个文件描述符存在于多个文件描述符集合的话就会被统计多次。还有文件描述符集合的上限通常是1024。</p>
+<h3 id="poll">poll()</h3>
+<p>​	poll()执行的任务和select是很相似的，区别在于poll()是通过一组文件描述符结构来代替select的三个集合。poll()函数的定义如下：</p>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">poll</span><span class="params">(struct pollfd fds[],<span class="keyword">nfds_t</span> nfds,<span class="keyword">int</span> timeout)</span></span>;</span><br><span class="line"><span class="comment">//fds列出了我们需要poll()来检查的文件描述符。该参数为pollfd 结构体数组</span></span><br><span class="line"><span class="comment">//参数nfds 指定了数组fds 中元素的个数。数据类型nfds_t 实际为无符号整形。</span></span><br></pre></td></tr></table></figure></div>
+<p>pollfd的结构如下：</p>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span>{</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="keyword">short</span> events;</span><br><span class="line">    <span class="keyword">short</span> revents;</span><br><span class="line">};</span><br></pre></td></tr></table></figure></div>
+<p>上面的events和revents都是位掩码。调用者初始化events 来指定需要为描述符fd 做检查的事件。当poll()返回时，revents 被设定以此来表示该文件描述符上实际发生的事件。</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915122617255.png" alt="image-20220915122617255"></p>
+<p>​	poll返回正整数时表示有1 个或多个文件描述符处于就绪态了。返回值表示数组fds 中拥有非零revents 字段的pollfd 结构体数量。</p>
+<p>​	poll和select一样，只会告诉我们<strong>I/O操作是否会阻塞</strong>，而不是告诉我们到底能否成功传输数据。而且poll也是跟select一样要在用户态和内核态之间拷贝文件描述符集合和线性地遍历哪个文件描述符就绪。当并发数量上去之后，所消耗的时间也会线性地增长，占用CPU的时间也就越多，而造成这两个方法性能不好的原因是它们API设计的局限性：程序重复调用这些系统调用所检查的文件描述符集合都是相同的，可是<strong>内核并不会在每次调用成功后就记录下它们</strong>。poll与select相比，就是没有了文件描述符集合大小的上限，不过随着要检查的文件描述符越多，poll的数据结构也就越大，也就占用更多的CPU时间。</p>
+<h3 id="epoll">epoll()</h3>
+<p>​	针对select和poll的问题，epoll便解决了他们的问题。epoll提供了三个函数，这三个函数分别是<code>epoll_create()</code>、<code>epoll_ctl()</code>和<code>epoll_wait()</code>：</p>
+<p>epoll_create:</p>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//创建一个epoll实例，返回值是这个epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//Linux2.6.8版本之前该方法有一个参数size来告诉内核应该如何为内部数据结构划分初始大小</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_create</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure></div>
+<p>​	用户调用该函数时，内核会创建一个struct eventpoll内核对象，并把它关联到当前进程的已打开的文件列表中。这个eventpoll对象有这么三个成员：</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915211541276.png" alt="image-20220915211541276"></p>
+<p>epoll_ctl:</p>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//修改由文件描述符epfd所代表的epoll实例中的兴趣列表。</span></span><br><span class="line"><span class="comment">//epfd：epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//op：执行的操作，有EPOLL_CTL_ADD、EPOLL_CTL_MOD和EPOLL_CTL_DEL</span></span><br><span class="line"><span class="comment">//fd：所要操作的文件描述符</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_ctl</span><span class="params">(<span class="keyword">int</span> epfd,<span class="keyword">int</span> op,<span class="keyword">int</span> fd,struct epoll_event *ev)</span></span>;</span><br></pre></td></tr></table></figure></div>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">epoll_event</span>{</span></span><br><span class="line">    <span class="keyword">uint32_t</span> events; <span class="comment">//事件掩码</span></span><br><span class="line">    <span class="keyword">epoll_data_t</span> data; <span class="comment">//文件描述符fd的消息</span></span><br><span class="line">}</span><br></pre></td></tr></table></figure></div>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">union</span> <span class="title">epoll_data</span>{</span></span><br><span class="line">    <span class="keyword">void</span> *ptr; <span class="comment">//指向用户自定义的数据</span></span><br><span class="line">    <span class="keyword">int</span> fd; <span class="comment">//注册的文件描述符</span></span><br><span class="line">    <span class="keyword">uint32_t</span> u32;</span><br><span class="line">    <span class="keyword">uint64_t</span> u64;</span><br><span class="line">}<span class="keyword">epoll_data_t</span>;</span><br></pre></td></tr></table></figure></div>
+<p>​	调用<code>epoll_ctl()</code>函数注册socket时，以添加监视socket为例子，内核会分配一个红黑树节点，然后将所要等待的事件添加到这个socket的等待队列中，并且设置了回调函数<code>ep_poll_callback()</code>，最后将分配好的红黑树节点插入到红黑树中，也就是epoll实例的兴趣列表。上面的回调函数的主要功能是所监视的socket所等待的事件发生时，会将其在兴趣列表上对应的实例添加到就绪链表中，就绪链表不为空时就会唤醒等待着就绪链表的进程，其调用的epoll_wait也就能继续执行下去。</p>
+<p>epoll_wait:</p>
+<div class="highlight-container" data-rel="C++"><figure class="iseeu highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">//阻塞等待所监视的文件描述符的事件发生，返回就绪的数目，并且将发生的事件写到evlist中</span></span><br><span class="line"><span class="comment">//epfd：epoll实例的文件描述符</span></span><br><span class="line"><span class="comment">//evlist：有关就绪态文件描述符的信息。数组evlist 的空间由调用者负责申请，所包含的元素个数在参数maxevents 中指定。</span></span><br><span class="line"><span class="comment">//maxevents：返回的就绪events的最大数目</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">epoll_wait</span><span class="params">(<span class="keyword">int</span> epfd,struct epoll_event *evlist,<span class="keyword">int</span> maxevents,<span class="keyword">int</span> timeout)</span></span>;</span><br></pre></td></tr></table></figure></div>
+<p>​	<strong>epoll_wait是阻塞</strong>的，当就绪链表没有数据时epoll_wait就会阻塞着去等待，直到超时或者就绪链表非空才继续执行。	就像上面说的epoll有两个存储实例的结构：兴趣列表和就绪链表。<code>epoll_ctl()</code>函数则是负责把所要监视的socket加入到兴趣列表，或者是修改其在兴趣列表里的状态，亦或者是将其从兴趣列表删除。<strong>兴趣列表</strong>的结构是一个<strong>红黑树</strong>，红黑树是一个高效率的数据结构，红黑树能让 epoll 在<strong>查找效率、插入效率、内存开销等等多个方面比较均衡</strong>，增删改的时间复杂度通常为O(logn)，而且这颗红黑树是维护在<strong>内核中</strong>的，也就是我们并不需要将其在用户态和内核态之间拷贝来拷贝去的，只需要传入待监视的socket进去就行。就绪链表是一个<strong>双链表</strong>，epoll_wait在检测到就绪事件后就会把最多<strong>maxevents个</strong>就绪事件从内核复制到用户空间中，也就是复制到所传入进来的evlist中。这样系统所遍历的返回的文件描述符都是就绪的，比select和poll遍历全部文件描述符集合高效了许多。上面的过程用一张简单的图来描述就是如下这样：</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220915214425308.png" alt="image-20220915214425308"></p>
+<p>​	基于epoll的特点，<strong>epoll</strong>的应用场景是在<strong>大量的连接需要监视</strong>但只有<strong>少数的文件描述符处于就绪状态</strong>的情况，这是由于epoll采用的是事件触发机制，如果<strong>大量的连接要处于就绪状态，就会大量地调用回调函数</strong>，回调的过程中又会涉及到兴趣列表(或者说被监视的socket列表)的遍历，这样操作的话效率就不如select和poll直接遍历整个文件描述符集合来获取就绪文件描述符了。相对的说，<strong>select和poll</strong>的应用场景就是<strong>少量的连接但大部分连接都是处于就绪状态</strong>的情况。</p>
+<h3 id="事件触发">事件触发</h3>
+<h4 id="边缘触发-ET——Edge-Trigger">边缘触发(ET——Edge Trigger)</h4>
+<p>​	当监控的socket上有事件发生时，服务端只会在epoll_wait中苏醒一次收到通知，即使进程没有read读缓冲区或者write写缓冲区，也不会再次通知，<strong>直到该socket的下一个事件发生</strong>。采用边缘触发时，要让程序尽可能地在对应的文件描述符上去执行I/O，比如尽可能地读取字节，所以我们就会<strong>循环</strong>地在文件描述符上执行I/O，如果文件描述符是阻塞的，在没有数据可读写时就会阻塞，程序无法继续进行下去，这也就是为什么<strong>边缘触发通常配合非阻塞I/O</strong>来使用，使文件描述符在得到通知后重复执行I/O操作直到相应系统调用以错误码<strong>EAGAIN</strong>或者<strong>EWOULDBLOCK</strong>的形式失败。</p>
+<h4 id="水平触发-LT——Level-Trigger">水平触发(LT——Level Trigger)</h4>
+<p>​	当监控的socket有事件发生而且可以非阻塞地进行I/O调用时，服务端就会在epoll_wait中<strong>不断地苏醒收到通知，直到内核缓冲区的数据读写完毕</strong>。也就是说我们可以在任意时刻检查I/O状态，而且没有必要在文件描述符就绪后尽可能多地执行I/O操作，甚至不进行I/O操作。</p>
+<p>​	边缘触发的效率是比水平触发的效率高的，因为<strong>边缘触发下系统不会充斥着大量不关心的就绪文件描述符</strong>，在很大程度上降低了同一个epoll事件被重复触发的次数。select和poll只支持水平触发，而epoll支持边缘触发，但是<strong>epoll默认的触发机制是水平触发</strong>，如果要使用边缘触发，就要在调用<code>epoll_ctl()</code>注册时在其epoll_event结构中将events字段指定为<strong>EPOLLET</strong>。</p>
+<p>I/O多路复用的整理大概就是这些了，I/O多路复用涉及到的应用其实还是挺多的，就比如Redis，基于内存操作的Redis的瓶颈在网络I/O和内存大小，单线程的Redis通过I/O多路复用监听多个socket从而实现一个Redis线程处理多个I/O流的效果。如果对epoll源码感兴趣的，也可以自行去尝试阅读下，链接：<a class="link" href="https://github.com/torvalds/linux/blob/master/fs/eventpoll.c%E3%80%82">https://github.com/torvalds/linux/blob/master/fs/eventpoll.c。 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+<h2 id="参考">参考</h2>
+<blockquote>
+<ul>
+<li><a class="link" href="https://xiaolincoding.com/os/8_network_system/selete_poll_epoll.html">I/O 多路复用：select/poll/epoll <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
+<li><a class="link" href="https://blog.csdn.net/u010429831/article/details/118600310">I/O多路复用的实现机制 - epoll 用法总结 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
+<li><a class="link" href="https://www.cnblogs.com/zhangyjblogs/p/15862358.html">IO多路复用原理&amp;场景  <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
+<li><a class="link" href="https://mp.weixin.qq.com/s?__biz=MjM5Njg5NDgwNA==&amp;mid=2247484905&amp;idx=1&amp;sn=a74ed5d7551c4fb80a8abe057405ea5e&amp;chksm=a6e304d291948dc4fd7fe32498daaae715adb5f84ec761c31faf7a6310f4b595f95186647f12&amp;scene=21#wechat_redirect">图解 | 深入揭秘 epoll 是如何实现 IO 多路复用的！ <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
+</ul>
+</blockquote>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+        <tag>I/O多路复用</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>浅谈虚拟内存</title>
+    <url>/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/</url>
+    <content><![CDATA[<p>​	关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。</p>
+<span id="more"></span>
+<h2 id="何为虚拟内存">何为虚拟内存</h2>
+<p>​	如果我们所有操作都直接去操作到物理内存的话很容易出现问题，当太多的进程需要太多的内存时，会因为内存的不足而导致部分进程无法运行。而且由于都是操作一块物理内存，很容易有一个进程写了另一个进程使用的内存造成问题，不好管理。所以为了更好地对内存进行管理，就有了虚拟内存。</p>
+<p>​	虚拟内存是对主存的一个抽象，我个人的理解来说，虚拟内存是磁盘里某个部分的映射，也就是虚拟内存其实是磁盘里某块连续的空间来的。虚拟内存的好处如下：</p>
+<blockquote>
+<ul>
+<li>把主存当作是一个存储在磁盘上的地址空间的<strong>高速缓存</strong>，虚拟内存维护的是磁盘里面的数据，而这些数据在需要时会从磁盘缓存到主存中，让进程认为自己拥有这么一块主存空间，而主存存储一些活动区域，进程的部分代码可以缓存在其中，大大地<strong>提高了主存的利用率</strong>。</li>
+<li>虚拟内存为每个进程都提供了一致的地址空间，每个进程都有自己的私有区域和共享区域，即<strong>方便了内存的管理</strong>，也<strong>保护了每个进程的地址空间不被其他进程破坏</strong>。</li>
+</ul>
+</blockquote>
+<h2 id="虚拟内存结构">虚拟内存结构</h2>
+<p>​	CSAPP中有这么一张图描绘了Linux下虚拟内存的结构：</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png" alt="image-20220821174738227"></p>
+<p>​	图中可以看到虚拟内存的结构就是一个<code>[内核虚拟内存][进程虚拟内存]</code>。</p>
+<h3 id="内核虚拟内存">内核虚拟内存</h3>
+<p>​	内核虚拟内存中又有对于每个进程而言相同和不相同的区域。物理内存和内核代码数据结构对每个进程来说是一样的，这部分区域里有着所映射的所有进程共享的物理页面，还有内核的代码和全局数据结构。另外一部分就是每个进程不同的数据部分，例如每个进程自己的页表、描述了进程任务的<code>task_struct</code>结构、描述了进程使用的虚拟内存情况的<code>mm_struct</code>结构和内核在执行上下文中执行代码时使用的栈。</p>
+<p>​	<code>task_struct</code>是内核为每一个进程维护的一个单独的任务结构，这个结构的元素包含或者指向内核运行该进程所需要的所有信息，例如<strong>进程ID、指向用户栈的指针、可执行目标文件的名字和程序计数器</strong>等。该结构里有一个元素指向了<code>mm_struct</code>，这个结构描述了虚拟内存当前的状态，该结构里我们关注<code>pgd</code>和<code>mmap</code>这两个字段，<code>pgd</code>指向的是一级页表的基址，而<code>mmap</code>指向的是一个描述区域结构<code>vm_area_structs</code> 的链表，这个区域结构描述了当前虚拟地址空间的一个区域。</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png" alt="image-20220821180629323"></p>
+<p>​	<code>vm_prot</code>描述了该区域内的页面读写权限，<code>vm_flags</code>描述了该区域内的页面是私有还是共享的。</p>
+<h3 id="进程虚拟内存">进程虚拟内存</h3>
+<p>​	进程虚拟内存从下到上的顺序是<code>.text</code>→<code>.data</code>→<code>.bss</code>→<code>运行时堆</code>→<code>共享库的内存映射区域</code>→<code>用户栈</code>，剩下的一些区域没有虚拟页，内核不记录这些不存在的虚拟页，这些部分也不占用任何的资源。</p>
+<p>​	<code>.text</code>存储的是编译好的代码段。</p>
+<p>​	<code>.data</code>存储的是已经进行了初始化的数据。</p>
+<p>​	<code>.bss</code>存储的是还未进行初始化的数据或者初始化为0的数据，是请求二进制零的，仅是占位符，不占空间。</p>
+<p>​	<strong><code>.text</code>段是只读的</strong>，而**<code>.data</code>和<code>.bss</code>段是可读/写的**。</p>
+<p>​	<code>运行时堆</code>则是运行时创建的一个区域，在C/C++中通常是通过<code>malloc</code>进行分配的，堆主要是存储的是我们运行进程时创建的一些变量对象等内容，内核维护着一个<code>brk</code>指针，指向堆的顶部。</p>
+<p>​	<code>共享库的映射区域</code>存储的就是与当前进程链接的共享对象的映射，概括的说就是动态库、共享内存等。</p>
+<p>​	<code>用户栈</code>则存储的是局部变量和函数调用的上下文等。</p>
+<p>​	如果学过Java的JVM的，对堆和栈都或多或少有印象和认识的，学习了虚拟内存后再去回顾JVM中类加载机制、对象创建和<strong>volatile</strong>变量的底层原理，说不定会有更加深刻的认知和记忆。</p>
+<h2 id="虚拟页">虚拟页</h2>
+<p>​	虚拟内存被系统分割成大小固定的块，这些块我们叫做<strong>虚拟页</strong>，物理内存分割的我们类似地称为<strong>物理页</strong>。虚拟页可以分为下面这三种：</p>
+<blockquote>
+<ul>
+<li>已经被分配且缓存在物理内存中的</li>
+<li>已经被分配但是还未缓存在物理内存中的</li>
+<li>还未被分配的。</li>
+</ul>
+</blockquote>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png" alt="image-20220821223900550"></p>
+<h3 id="页表">页表</h3>
+<p>​	为了判定一个虚拟页是否有缓存在物理内存中，使用到了一个叫做<strong>页表</strong>的结构，虚拟地址空间的每个页都有个在页表的页表项，这个页表项存有这个页面的有效位和其对应的物理地址或者磁盘地址，当有效位为1时，为物理地址，有效位为0时，如果页面已经分配，则为磁盘地址，否则为空地址。</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png" alt="image-20220821233804778"></p>
+<p>​	页面的查找流程通常是这样的：处理器生成一个虚拟地址给CPU里的MMU(内存管理单元)，然后MMU翻译出这个虚拟地址所对应的页表项地址去页表查找，如果对应的页在内存中，则内存向MMU返回对应的页表项，然后MMU得出对应的物理地址后传送到内存中，最后内存返回所请求的数据给处理器。</p>
+<h3 id="缺页">缺页</h3>
+<p>​	上面是比较理想的情况，也有出现缺页的情况，即对应的物理页不在内存中，这时候就会触发缺页中断，系统由用户态进入到内核态，调用缺页异常处理程序，这个程序会选择一个牺牲页，如果该页面是个脏页面，内核就会把它写回磁盘后释放掉。然后再从磁盘中将对应的页面复制到内存中并更新页表，重新回到引起缺页的指令。而这在磁盘和内存之间传送页的行为称之为<strong>交换</strong>或者<strong>页面调度</strong>。要注意页面没有命中的影响是挺大的。如果调度的页面大小超过了物理内存的大小，就会不断进行页面地换入换出，造成<strong>抖动</strong>，这是很不好的影响。</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png" alt="image-20220821231454373"></p>
+<h3 id="多级页表">多级页表</h3>
+<p>​	通常我们的页面的大小为<code>4KB</code>，一个页表项的大小为<code>4B</code>，在32位的系统下，就有<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: 0;" xmlns="http://www.w3.org/2000/svg" width="2.919ex" height="2ex" role="img" focusable="false" viewbox="0 -883.9 1290.1 883.9"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><path data-c="32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"/></g><g data-mml-node="TeXAtom" transform="translate(533,413) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mn"><path data-c="32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"/><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z" transform="translate(500,0)"/></g></g></g></g></g></svg></mjx-container>个页面，这样一个进程的页表就达到了<code>4MB</code>。所以就有了<strong>多级页表</strong>。假设我们有一个二级页表，第一级页表存储的是指向第二级页表的地址，第二级页表存储的是物理地址或者磁盘地址。这样我们就可以用一个<code>4KB</code>的一级页表去管理理论上总共<code>4MB</code>的二级页表，这看起来好像比之前多了，但其实我们往往不会为一个进程分配那么多内存的，而且如果一级页表的某个页表项是空的，则其对应的二级页表也不会存在的，只有在需要时才会创建，我们假设一级页表只有20%的页面在使用，那么所需要的的内存就是<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="30.146ex" height="1.731ex" role="img" focusable="false" viewbox="0 -683 13324.4 765"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><path data-c="34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"/></g><g data-mml-node="mi" transform="translate(500,0)"><path data-c="1D43E" d="M285 628Q285 635 228 637Q205 637 198 638T191 647Q191 649 193 661Q199 681 203 682Q205 683 214 683H219Q260 681 355 681Q389 681 418 681T463 682T483 682Q500 682 500 674Q500 669 497 660Q496 658 496 654T495 648T493 644T490 641T486 639T479 638T470 637T456 637Q416 636 405 634T387 623L306 305Q307 305 490 449T678 597Q692 611 692 620Q692 635 667 637Q651 637 651 648Q651 650 654 662T659 677Q662 682 676 682Q680 682 711 681T791 680Q814 680 839 681T869 682Q889 682 889 672Q889 650 881 642Q878 637 862 637Q787 632 726 586Q710 576 656 534T556 455L509 418L518 396Q527 374 546 329T581 244Q656 67 661 61Q663 59 666 57Q680 47 717 46H738Q744 38 744 37T741 19Q737 6 731 0H720Q680 3 625 3Q503 3 488 0H478Q472 6 472 9T474 27Q478 40 480 43T491 46H494Q544 46 544 71Q544 75 517 141T485 216L427 354L359 301L291 248L268 155Q245 63 245 58Q245 51 253 49T303 46H334Q340 37 340 35Q340 19 333 5Q328 0 317 0Q314 0 280 1T180 2Q118 2 85 2T49 1Q31 1 31 11Q31 13 34 25Q38 41 42 43T65 46Q92 46 125 49Q139 52 144 61Q147 65 216 339T285 628Z"/></g><g data-mml-node="mi" transform="translate(1389,0)"><path data-c="1D435" d="M231 637Q204 637 199 638T194 649Q194 676 205 682Q206 683 335 683Q594 683 608 681Q671 671 713 636T756 544Q756 480 698 429T565 360L555 357Q619 348 660 311T702 219Q702 146 630 78T453 1Q446 0 242 0Q42 0 39 2Q35 5 35 10Q35 17 37 24Q42 43 47 45Q51 46 62 46H68Q95 46 128 49Q142 52 147 61Q150 65 219 339T288 628Q288 635 231 637ZM649 544Q649 574 634 600T585 634Q578 636 493 637Q473 637 451 637T416 636H403Q388 635 384 626Q382 622 352 506Q352 503 351 500L320 374H401Q482 374 494 376Q554 386 601 434T649 544ZM595 229Q595 273 572 302T512 336Q506 337 429 337Q311 337 310 336Q310 334 293 263T258 122L240 52Q240 48 252 48T333 46Q422 46 429 47Q491 54 543 105T595 229Z"/></g><g data-mml-node="mo" transform="translate(2370.2,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mn" transform="translate(3370.4,0)"><path data-c="34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"/></g><g data-mml-node="mi" transform="translate(3870.4,0)"><path data-c="1D440" d="M289 629Q289 635 232 637Q208 637 201 638T194 648Q194 649 196 659Q197 662 198 666T199 671T201 676T203 679T207 681T212 683T220 683T232 684Q238 684 262 684T307 683Q386 683 398 683T414 678Q415 674 451 396L487 117L510 154Q534 190 574 254T662 394Q837 673 839 675Q840 676 842 678T846 681L852 683H948Q965 683 988 683T1017 684Q1051 684 1051 673Q1051 668 1048 656T1045 643Q1041 637 1008 637Q968 636 957 634T939 623Q936 618 867 340T797 59Q797 55 798 54T805 50T822 48T855 46H886Q892 37 892 35Q892 19 885 5Q880 0 869 0Q864 0 828 1T736 2Q675 2 644 2T609 1Q592 1 592 11Q592 13 594 25Q598 41 602 43T625 46Q652 46 685 49Q699 52 704 61Q706 65 742 207T813 490T848 631L654 322Q458 10 453 5Q451 4 449 3Q444 0 433 0Q418 0 415 7Q413 11 374 317L335 624L267 354Q200 88 200 79Q206 46 272 46H282Q288 41 289 37T286 19Q282 3 278 1Q274 0 267 0Q265 0 255 0T221 1T157 2Q127 2 95 1T58 0Q43 0 39 2T35 11Q35 13 38 25T43 40Q45 46 65 46Q135 46 154 86Q158 92 223 354T289 629Z"/></g><g data-mml-node="mi" transform="translate(4921.4,0)"><path data-c="1D435" d="M231 637Q204 637 199 638T194 649Q194 676 205 682Q206 683 335 683Q594 683 608 681Q671 671 713 636T756 544Q756 480 698 429T565 360L555 357Q619 348 660 311T702 219Q702 146 630 78T453 1Q446 0 242 0Q42 0 39 2Q35 5 35 10Q35 17 37 24Q42 43 47 45Q51 46 62 46H68Q95 46 128 49Q142 52 147 61Q150 65 219 339T288 628Q288 635 231 637ZM649 544Q649 574 634 600T585 634Q578 636 493 637Q473 637 451 637T416 636H403Q388 635 384 626Q382 622 352 506Q352 503 351 500L320 374H401Q482 374 494 376Q554 386 601 434T649 544ZM595 229Q595 273 572 302T512 336Q506 337 429 337Q311 337 310 336Q310 334 293 263T258 122L240 52Q240 48 252 48T333 46Q422 46 429 47Q491 54 543 105T595 229Z"/></g><g data-mml-node="mo" transform="translate(5902.7,0)"><path data-c="2217" d="M229 286Q216 420 216 436Q216 454 240 464Q241 464 245 464T251 465Q263 464 273 456T283 436Q283 419 277 356T270 286L328 328Q384 369 389 372T399 375Q412 375 423 365T435 338Q435 325 425 315Q420 312 357 282T289 250L355 219L425 184Q434 175 434 161Q434 146 425 136T401 125Q393 125 383 131T328 171L270 213Q283 79 283 63Q283 53 276 44T250 35Q231 35 224 44T216 63Q216 80 222 143T229 213L171 171Q115 130 110 127Q106 124 100 124Q87 124 76 134T64 161Q64 166 64 169T67 175T72 181T81 188T94 195T113 204T138 215T170 230T210 250L74 315Q65 324 65 338Q65 353 74 363T98 374Q106 374 116 368T171 328L229 286Z"/></g><g data-mml-node="mn" transform="translate(6624.9,0)"><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"/><path data-c="2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z" transform="translate(500,0)"/><path data-c="32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z" transform="translate(778,0)"/></g><g data-mml-node="mo" transform="translate(8180.7,0)"><path data-c="3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"/></g><g data-mml-node="mn" transform="translate(9236.4,0)"><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"/><path data-c="2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z" transform="translate(500,0)"/><path data-c="38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z" transform="translate(778,0)"/><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z" transform="translate(1278,0)"/><path data-c="34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z" transform="translate(1778,0)"/></g><g data-mml-node="mi" transform="translate(11514.4,0)"><path data-c="1D440" d="M289 629Q289 635 232 637Q208 637 201 638T194 648Q194 649 196 659Q197 662 198 666T199 671T201 676T203 679T207 681T212 683T220 683T232 684Q238 684 262 684T307 683Q386 683 398 683T414 678Q415 674 451 396L487 117L510 154Q534 190 574 254T662 394Q837 673 839 675Q840 676 842 678T846 681L852 683H948Q965 683 988 683T1017 684Q1051 684 1051 673Q1051 668 1048 656T1045 643Q1041 637 1008 637Q968 636 957 634T939 623Q936 618 867 340T797 59Q797 55 798 54T805 50T822 48T855 46H886Q892 37 892 35Q892 19 885 5Q880 0 869 0Q864 0 828 1T736 2Q675 2 644 2T609 1Q592 1 592 11Q592 13 594 25Q598 41 602 43T625 46Q652 46 685 49Q699 52 704 61Q706 65 742 207T813 490T848 631L654 322Q458 10 453 5Q451 4 449 3Q444 0 433 0Q418 0 415 7Q413 11 374 317L335 624L267 354Q200 88 200 79Q206 46 272 46H282Q288 41 289 37T286 19Q282 3 278 1Q274 0 267 0Q265 0 255 0T221 1T157 2Q127 2 95 1T58 0Q43 0 39 2T35 11Q35 13 38 25T43 40Q45 46 65 46Q135 46 154 86Q158 92 223 354T289 629Z"/></g><g data-mml-node="mi" transform="translate(12565.4,0)"><path data-c="1D435" d="M231 637Q204 637 199 638T194 649Q194 676 205 682Q206 683 335 683Q594 683 608 681Q671 671 713 636T756 544Q756 480 698 429T565 360L555 357Q619 348 660 311T702 219Q702 146 630 78T453 1Q446 0 242 0Q42 0 39 2Q35 5 35 10Q35 17 37 24Q42 43 47 45Q51 46 62 46H68Q95 46 128 49Q142 52 147 61Q150 65 219 339T288 628Q288 635 231 637ZM649 544Q649 574 634 600T585 634Q578 636 493 637Q473 637 451 637T416 636H403Q388 635 384 626Q382 622 352 506Q352 503 351 500L320 374H401Q482 374 494 376Q554 386 601 434T649 544ZM595 229Q595 273 572 302T512 336Q506 337 429 337Q311 337 310 336Q310 334 293 263T258 122L240 52Q240 48 252 48T333 46Q422 46 429 47Q491 54 543 105T595 229Z"/></g></g></g></svg></mjx-container>，对比起只有单独的页表的<code>4MB</code>，那是节省了巨大的内存。</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png" alt="image-20220821233204041"></p>
+<h3 id="快表TLB">快表TLB</h3>
+<p>​	除了多级页表，也有一个<code>TLB</code>，即我们所说的<strong>快表</strong>。根据<strong>局部性原理</strong>，在一段时间内，整个程序的执行仅限于程序中的某一部分。相应地，执行所访问的存储空间也局限于某个内存区域。我们把程序最常访问的页表项存在快表中，且快表是在CPU芯片里的，地址的翻译步骤都在MMU上，如果命中页面的话那速度是非常快的。如果快表没有命中，就会查找常规的页表，然后把查找到的页表项也存储到快表中，这一步可能会覆盖掉某个快表上的条目。</p>
+<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png" alt="image-20220821233649707"></p>
+<h2 id="参考资料">参考资料</h2>
+<blockquote>
+<ul>
+<li><a class="link" href="https://xiaolincoding.com/os/3_memory/vmem.html">小林coding-为什么要有虚拟内存 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
+<li>《深入理解计算机系统》</li>
+</ul>
+</blockquote>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
       </tags>
   </entry>
   <entry>
@@ -365,408 +768,5 @@
         <tag>Java</tag>
         <tag>JVM</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>浅谈虚拟内存</title>
-    <url>/%E6%B5%85%E8%B0%88%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98/</url>
-    <content><![CDATA[<p>​	关于虚拟内存，本人虽然在上学校的操作系统课的时候有学到过，但说来惭愧，我对这一块的知识也是没有完全的掌握，还感觉到有点抽象。所以最近两天阅读了下CSAPP的虚拟内存这一章和参考了小林coding有关内存管理的笔记，终于是对虚拟内存这一块有了个大致的理解。</p>
-<span id="more"></span>
-<h2 id="何为虚拟内存">何为虚拟内存</h2>
-<p>​	如果我们所有操作都直接去操作到物理内存的话很容易出现问题，当太多的进程需要太多的内存时，会因为内存的不足而导致部分进程无法运行。而且由于都是操作一块物理内存，很容易有一个进程写了另一个进程使用的内存造成问题，不好管理。所以为了更好地对内存进行管理，就有了虚拟内存。</p>
-<p>​	虚拟内存是对主存的一个抽象，我个人的理解来说，虚拟内存是磁盘里某个部分的映射，也就是虚拟内存其实是磁盘里某块连续的空间来的。虚拟内存的好处如下：</p>
-<blockquote>
-<ul>
-<li>把主存当作是一个存储在磁盘上的地址空间的<strong>高速缓存</strong>，虚拟内存维护的是磁盘里面的数据，而这些数据在需要时会从磁盘缓存到主存中，让进程认为自己拥有这么一块主存空间，而主存存储一些活动区域，进程的部分代码可以缓存在其中，大大地<strong>提高了主存的利用率</strong>。</li>
-<li>虚拟内存为每个进程都提供了一致的地址空间，每个进程都有自己的私有区域和共享区域，即<strong>方便了内存的管理</strong>，也<strong>保护了每个进程的地址空间不被其他进程破坏</strong>。</li>
-</ul>
-</blockquote>
-<h2 id="虚拟内存结构">虚拟内存结构</h2>
-<p>​	CSAPP中有这么一张图描绘了Linux下虚拟内存的结构：</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821174738227.png" alt="image-20220821174738227"></p>
-<p>​	图中可以看到虚拟内存的结构就是一个<code>[内核虚拟内存][进程虚拟内存]</code>。</p>
-<h3 id="内核虚拟内存">内核虚拟内存</h3>
-<p>​	内核虚拟内存中又有对于每个进程而言相同和不相同的区域。物理内存和内核代码数据结构对每个进程来说是一样的，这部分区域里有着所映射的所有进程共享的物理页面，还有内核的代码和全局数据结构。另外一部分就是每个进程不同的数据部分，例如每个进程自己的页表、描述了进程任务的<code>task_struct</code>结构、描述了进程使用的虚拟内存情况的<code>mm_struct</code>结构和内核在执行上下文中执行代码时使用的栈。</p>
-<p>​	<code>task_struct</code>是内核为每一个进程维护的一个单独的任务结构，这个结构的元素包含或者指向内核运行该进程所需要的所有信息，例如<strong>进程ID、指向用户栈的指针、可执行目标文件的名字和程序计数器</strong>等。该结构里有一个元素指向了<code>mm_struct</code>，这个结构描述了虚拟内存当前的状态，该结构里我们关注<code>pgd</code>和<code>mmap</code>这两个字段，<code>pgd</code>指向的是一级页表的基址，而<code>mmap</code>指向的是一个描述区域结构<code>vm_area_structs</code> 的链表，这个区域结构描述了当前虚拟地址空间的一个区域。</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821180629323.png" alt="image-20220821180629323"></p>
-<p>​	<code>vm_prot</code>描述了该区域内的页面读写权限，<code>vm_flags</code>描述了该区域内的页面是私有还是共享的。</p>
-<h3 id="进程虚拟内存">进程虚拟内存</h3>
-<p>​	进程虚拟内存从下到上的顺序是<code>.text</code>→<code>.data</code>→<code>.bss</code>→<code>运行时堆</code>→<code>共享库的内存映射区域</code>→<code>用户栈</code>，剩下的一些区域没有虚拟页，内核不记录这些不存在的虚拟页，这些部分也不占用任何的资源。</p>
-<p>​	<code>.text</code>存储的是编译好的代码段。</p>
-<p>​	<code>.data</code>存储的是已经进行了初始化的数据。</p>
-<p>​	<code>.bss</code>存储的是还未进行初始化的数据或者初始化为0的数据，是请求二进制零的，仅是占位符，不占空间。</p>
-<p>​	<strong><code>.text</code>段是只读的</strong>，而**<code>.data</code>和<code>.bss</code>段是可读/写的**。</p>
-<p>​	<code>运行时堆</code>则是运行时创建的一个区域，在C/C++中通常是通过<code>malloc</code>进行分配的，堆主要是存储的是我们运行进程时创建的一些变量对象等内容，内核维护着一个<code>brk</code>指针，指向堆的顶部。</p>
-<p>​	<code>共享库的映射区域</code>存储的就是与当前进程链接的共享对象的映射，概括的说就是动态库、共享内存等。</p>
-<p>​	<code>用户栈</code>则存储的是局部变量和函数调用的上下文等。</p>
-<p>​	如果学过Java的JVM的，对堆和栈都或多或少有印象和认识的，学习了虚拟内存后再去回顾JVM中类加载机制、对象创建和<strong>volatile</strong>变量的底层原理，说不定会有更加深刻的认知和记忆。</p>
-<h2 id="虚拟页">虚拟页</h2>
-<p>​	虚拟内存被系统分割成大小固定的块，这些块我们叫做<strong>虚拟页</strong>，物理内存分割的我们类似地称为<strong>物理页</strong>。虚拟页可以分为下面这三种：</p>
-<blockquote>
-<ul>
-<li>已经被分配且缓存在物理内存中的</li>
-<li>已经被分配但是还未缓存在物理内存中的</li>
-<li>还未被分配的。</li>
-</ul>
-</blockquote>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821223900550.png" alt="image-20220821223900550"></p>
-<h3 id="页表">页表</h3>
-<p>​	为了判定一个虚拟页是否有缓存在物理内存中，使用到了一个叫做<strong>页表</strong>的结构，虚拟地址空间的每个页都有个在页表的页表项，这个页表项存有这个页面的有效位和其对应的物理地址或者磁盘地址，当有效位为1时，为物理地址，有效位为0时，如果页面已经分配，则为磁盘地址，否则为空地址。</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233804778.png" alt="image-20220821233804778"></p>
-<p>​	页面的查找流程通常是这样的：处理器生成一个虚拟地址给CPU里的MMU(内存管理单元)，然后MMU翻译出这个虚拟地址所对应的页表项地址去页表查找，如果对应的页在内存中，则内存向MMU返回对应的页表项，然后MMU得出对应的物理地址后传送到内存中，最后内存返回所请求的数据给处理器。</p>
-<h3 id="缺页">缺页</h3>
-<p>​	上面是比较理想的情况，也有出现缺页的情况，即对应的物理页不在内存中，这时候就会触发缺页中断，系统由用户态进入到内核态，调用缺页异常处理程序，这个程序会选择一个牺牲页，如果该页面是个脏页面，内核就会把它写回磁盘后释放掉。然后再从磁盘中将对应的页面复制到内存中并更新页表，重新回到引起缺页的指令。而这在磁盘和内存之间传送页的行为称之为<strong>交换</strong>或者<strong>页面调度</strong>。要注意页面没有命中的影响是挺大的。如果调度的页面大小超过了物理内存的大小，就会不断进行页面地换入换出，造成<strong>抖动</strong>，这是很不好的影响。</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821231454373.png" alt="image-20220821231454373"></p>
-<h3 id="多级页表">多级页表</h3>
-<p>​	通常我们的页面的大小为<code>4KB</code>，一个页表项的大小为<code>4B</code>，在32位的系统下，就有<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: 0;" xmlns="http://www.w3.org/2000/svg" width="2.919ex" height="2ex" role="img" focusable="false" viewbox="0 -883.9 1290.1 883.9"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><path data-c="32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"/></g><g data-mml-node="TeXAtom" transform="translate(533,413) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mn"><path data-c="32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"/><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z" transform="translate(500,0)"/></g></g></g></g></g></svg></mjx-container>个页面，这样一个进程的页表就达到了<code>4MB</code>。所以就有了<strong>多级页表</strong>。假设我们有一个二级页表，第一级页表存储的是指向第二级页表的地址，第二级页表存储的是物理地址或者磁盘地址。这样我们就可以用一个<code>4KB</code>的一级页表去管理理论上总共<code>4MB</code>的二级页表，这看起来好像比之前多了，但其实我们往往不会为一个进程分配那么多内存的，而且如果一级页表的某个页表项是空的，则其对应的二级页表也不会存在的，只有在需要时才会创建，我们假设一级页表只有20%的页面在使用，那么所需要的的内存就是<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="30.146ex" height="1.731ex" role="img" focusable="false" viewbox="0 -683 13324.4 765"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><path data-c="34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"/></g><g data-mml-node="mi" transform="translate(500,0)"><path data-c="1D43E" d="M285 628Q285 635 228 637Q205 637 198 638T191 647Q191 649 193 661Q199 681 203 682Q205 683 214 683H219Q260 681 355 681Q389 681 418 681T463 682T483 682Q500 682 500 674Q500 669 497 660Q496 658 496 654T495 648T493 644T490 641T486 639T479 638T470 637T456 637Q416 636 405 634T387 623L306 305Q307 305 490 449T678 597Q692 611 692 620Q692 635 667 637Q651 637 651 648Q651 650 654 662T659 677Q662 682 676 682Q680 682 711 681T791 680Q814 680 839 681T869 682Q889 682 889 672Q889 650 881 642Q878 637 862 637Q787 632 726 586Q710 576 656 534T556 455L509 418L518 396Q527 374 546 329T581 244Q656 67 661 61Q663 59 666 57Q680 47 717 46H738Q744 38 744 37T741 19Q737 6 731 0H720Q680 3 625 3Q503 3 488 0H478Q472 6 472 9T474 27Q478 40 480 43T491 46H494Q544 46 544 71Q544 75 517 141T485 216L427 354L359 301L291 248L268 155Q245 63 245 58Q245 51 253 49T303 46H334Q340 37 340 35Q340 19 333 5Q328 0 317 0Q314 0 280 1T180 2Q118 2 85 2T49 1Q31 1 31 11Q31 13 34 25Q38 41 42 43T65 46Q92 46 125 49Q139 52 144 61Q147 65 216 339T285 628Z"/></g><g data-mml-node="mi" transform="translate(1389,0)"><path data-c="1D435" d="M231 637Q204 637 199 638T194 649Q194 676 205 682Q206 683 335 683Q594 683 608 681Q671 671 713 636T756 544Q756 480 698 429T565 360L555 357Q619 348 660 311T702 219Q702 146 630 78T453 1Q446 0 242 0Q42 0 39 2Q35 5 35 10Q35 17 37 24Q42 43 47 45Q51 46 62 46H68Q95 46 128 49Q142 52 147 61Q150 65 219 339T288 628Q288 635 231 637ZM649 544Q649 574 634 600T585 634Q578 636 493 637Q473 637 451 637T416 636H403Q388 635 384 626Q382 622 352 506Q352 503 351 500L320 374H401Q482 374 494 376Q554 386 601 434T649 544ZM595 229Q595 273 572 302T512 336Q506 337 429 337Q311 337 310 336Q310 334 293 263T258 122L240 52Q240 48 252 48T333 46Q422 46 429 47Q491 54 543 105T595 229Z"/></g><g data-mml-node="mo" transform="translate(2370.2,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mn" transform="translate(3370.4,0)"><path data-c="34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"/></g><g data-mml-node="mi" transform="translate(3870.4,0)"><path data-c="1D440" d="M289 629Q289 635 232 637Q208 637 201 638T194 648Q194 649 196 659Q197 662 198 666T199 671T201 676T203 679T207 681T212 683T220 683T232 684Q238 684 262 684T307 683Q386 683 398 683T414 678Q415 674 451 396L487 117L510 154Q534 190 574 254T662 394Q837 673 839 675Q840 676 842 678T846 681L852 683H948Q965 683 988 683T1017 684Q1051 684 1051 673Q1051 668 1048 656T1045 643Q1041 637 1008 637Q968 636 957 634T939 623Q936 618 867 340T797 59Q797 55 798 54T805 50T822 48T855 46H886Q892 37 892 35Q892 19 885 5Q880 0 869 0Q864 0 828 1T736 2Q675 2 644 2T609 1Q592 1 592 11Q592 13 594 25Q598 41 602 43T625 46Q652 46 685 49Q699 52 704 61Q706 65 742 207T813 490T848 631L654 322Q458 10 453 5Q451 4 449 3Q444 0 433 0Q418 0 415 7Q413 11 374 317L335 624L267 354Q200 88 200 79Q206 46 272 46H282Q288 41 289 37T286 19Q282 3 278 1Q274 0 267 0Q265 0 255 0T221 1T157 2Q127 2 95 1T58 0Q43 0 39 2T35 11Q35 13 38 25T43 40Q45 46 65 46Q135 46 154 86Q158 92 223 354T289 629Z"/></g><g data-mml-node="mi" transform="translate(4921.4,0)"><path data-c="1D435" d="M231 637Q204 637 199 638T194 649Q194 676 205 682Q206 683 335 683Q594 683 608 681Q671 671 713 636T756 544Q756 480 698 429T565 360L555 357Q619 348 660 311T702 219Q702 146 630 78T453 1Q446 0 242 0Q42 0 39 2Q35 5 35 10Q35 17 37 24Q42 43 47 45Q51 46 62 46H68Q95 46 128 49Q142 52 147 61Q150 65 219 339T288 628Q288 635 231 637ZM649 544Q649 574 634 600T585 634Q578 636 493 637Q473 637 451 637T416 636H403Q388 635 384 626Q382 622 352 506Q352 503 351 500L320 374H401Q482 374 494 376Q554 386 601 434T649 544ZM595 229Q595 273 572 302T512 336Q506 337 429 337Q311 337 310 336Q310 334 293 263T258 122L240 52Q240 48 252 48T333 46Q422 46 429 47Q491 54 543 105T595 229Z"/></g><g data-mml-node="mo" transform="translate(5902.7,0)"><path data-c="2217" d="M229 286Q216 420 216 436Q216 454 240 464Q241 464 245 464T251 465Q263 464 273 456T283 436Q283 419 277 356T270 286L328 328Q384 369 389 372T399 375Q412 375 423 365T435 338Q435 325 425 315Q420 312 357 282T289 250L355 219L425 184Q434 175 434 161Q434 146 425 136T401 125Q393 125 383 131T328 171L270 213Q283 79 283 63Q283 53 276 44T250 35Q231 35 224 44T216 63Q216 80 222 143T229 213L171 171Q115 130 110 127Q106 124 100 124Q87 124 76 134T64 161Q64 166 64 169T67 175T72 181T81 188T94 195T113 204T138 215T170 230T210 250L74 315Q65 324 65 338Q65 353 74 363T98 374Q106 374 116 368T171 328L229 286Z"/></g><g data-mml-node="mn" transform="translate(6624.9,0)"><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"/><path data-c="2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z" transform="translate(500,0)"/><path data-c="32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z" transform="translate(778,0)"/></g><g data-mml-node="mo" transform="translate(8180.7,0)"><path data-c="3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"/></g><g data-mml-node="mn" transform="translate(9236.4,0)"><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"/><path data-c="2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z" transform="translate(500,0)"/><path data-c="38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z" transform="translate(778,0)"/><path data-c="30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z" transform="translate(1278,0)"/><path data-c="34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z" transform="translate(1778,0)"/></g><g data-mml-node="mi" transform="translate(11514.4,0)"><path data-c="1D440" d="M289 629Q289 635 232 637Q208 637 201 638T194 648Q194 649 196 659Q197 662 198 666T199 671T201 676T203 679T207 681T212 683T220 683T232 684Q238 684 262 684T307 683Q386 683 398 683T414 678Q415 674 451 396L487 117L510 154Q534 190 574 254T662 394Q837 673 839 675Q840 676 842 678T846 681L852 683H948Q965 683 988 683T1017 684Q1051 684 1051 673Q1051 668 1048 656T1045 643Q1041 637 1008 637Q968 636 957 634T939 623Q936 618 867 340T797 59Q797 55 798 54T805 50T822 48T855 46H886Q892 37 892 35Q892 19 885 5Q880 0 869 0Q864 0 828 1T736 2Q675 2 644 2T609 1Q592 1 592 11Q592 13 594 25Q598 41 602 43T625 46Q652 46 685 49Q699 52 704 61Q706 65 742 207T813 490T848 631L654 322Q458 10 453 5Q451 4 449 3Q444 0 433 0Q418 0 415 7Q413 11 374 317L335 624L267 354Q200 88 200 79Q206 46 272 46H282Q288 41 289 37T286 19Q282 3 278 1Q274 0 267 0Q265 0 255 0T221 1T157 2Q127 2 95 1T58 0Q43 0 39 2T35 11Q35 13 38 25T43 40Q45 46 65 46Q135 46 154 86Q158 92 223 354T289 629Z"/></g><g data-mml-node="mi" transform="translate(12565.4,0)"><path data-c="1D435" d="M231 637Q204 637 199 638T194 649Q194 676 205 682Q206 683 335 683Q594 683 608 681Q671 671 713 636T756 544Q756 480 698 429T565 360L555 357Q619 348 660 311T702 219Q702 146 630 78T453 1Q446 0 242 0Q42 0 39 2Q35 5 35 10Q35 17 37 24Q42 43 47 45Q51 46 62 46H68Q95 46 128 49Q142 52 147 61Q150 65 219 339T288 628Q288 635 231 637ZM649 544Q649 574 634 600T585 634Q578 636 493 637Q473 637 451 637T416 636H403Q388 635 384 626Q382 622 352 506Q352 503 351 500L320 374H401Q482 374 494 376Q554 386 601 434T649 544ZM595 229Q595 273 572 302T512 336Q506 337 429 337Q311 337 310 336Q310 334 293 263T258 122L240 52Q240 48 252 48T333 46Q422 46 429 47Q491 54 543 105T595 229Z"/></g></g></g></svg></mjx-container>，对比起只有单独的页表的<code>4MB</code>，那是节省了巨大的内存。</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233204041.png" alt="image-20220821233204041"></p>
-<h3 id="快表TLB">快表TLB</h3>
-<p>​	除了多级页表，也有一个<code>TLB</code>，即我们所说的<strong>快表</strong>。根据<strong>局部性原理</strong>，在一段时间内，整个程序的执行仅限于程序中的某一部分。相应地，执行所访问的存储空间也局限于某个内存区域。我们把程序最常访问的页表项存在快表中，且快表是在CPU芯片里的，地址的翻译步骤都在MMU上，如果命中页面的话那速度是非常快的。如果快表没有命中，就会查找常规的页表，然后把查找到的页表项也存储到快表中，这一步可能会覆盖掉某个快表上的条目。</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220821233649707.png" alt="image-20220821233649707"></p>
-<h2 id="参考资料">参考资料</h2>
-<blockquote>
-<ul>
-<li><a class="link" href="https://xiaolincoding.com/os/3_memory/vmem.html">小林coding-为什么要有虚拟内存 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></li>
-<li>《深入理解计算机系统》</li>
-</ul>
-</blockquote>
-]]></content>
-      <categories>
-        <category>操作系统</category>
-      </categories>
-      <tags>
-        <tag>操作系统</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Mysql慢查询——查询优化</title>
-    <url>/Mysql%E6%85%A2%E6%9F%A5%E8%AF%A2%E2%80%94%E2%80%94%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</url>
-    <content><![CDATA[<p>在一些公司的面试题中，可以经常看到有这么一道MySQL的面试题：<code>对于SQL查询慢的问题你要怎么去发现和解决</code>。最初我也大概只能回答个索引相关的，比如"通过EXPLAIN查看查询的访问类型和一些查询情况"， "查看是否可以在某些表的字段增加索引然后改写查询语句"等，网上的八股也很少提及这个问题，所以我还是去阅读了一下《高性能MySQL》，通过阅读后，我也大致地了解了查询的一些问题所在以及优化的方法，这篇文章便是我针对这本书第六章内容的一些整理总结(其实就是相当于摘抄吧 😤 )。方便自己记忆的同时也放到博客上来给博客更新一下(其实是都放到本地没怎么上传到博客，属于是懒🐶了)</p>
-<span id="more"></span>
-<h2 id="为什么查询慢">为什么查询慢</h2>
-<p>​	在我们看待这个问题的时候，我们就要想：是什么造成SQL的查询慢呢，通过对索引的学习我们也知道索引对于高性能的重要性，但光有索引也是不够的，查询语句的合理性也是要考虑的，如果一个查询语句写的很烂，即使我们的表结构和索引设计的再好，那也是无济于事的。</p>
-<p>​	查询的生命周期大致可以这么来看：客户端发送请求到服务器👉服务器进行解析👉生成执行计划👉<strong>执行</strong>👉返回结果给客户端。一个查询会在一个生命周期内涉及到这些个任务，而每个任务的完成时间也是不同的。我们可以针对这么一个大概的生命周期概念，来对我们的查询进行一个优化。</p>
-<h2 id="优化查询访问">优化查询访问</h2>
-<p>​	查询性能低一个最基本的原因是我们访问的数据太多，针对查询数据多这一问题，我们可以看看是否有存在这么两个问题：<code>是否查询了很多我们不需要的数据</code>；<code>MySQL的服务器是否在分析大量超过我们需要的数据</code>。</p>
-<h3 id="是否查询了很多不需要的数据">是否查询了很多不需要的数据</h3>
-<p>​	我们通常会认为MySQL返回的是我们需要的数据，但实际上MySQL是<strong>先返回全部的结果集再进行计算</strong>，所以我们有时候要考虑我们是否真的需要这么多数据呢，就好像我们要让一个页面显示10条数据，我们就要先查个100条数据然后再选前10条展示吗，显而易见是不用的，我们加个 limit 即可。</p>
-<p>​	对于<code>select *</code>的写法我们也要在使用的时候去想我们是否真的需要去使用它呢，对于一些开发者来说，在知道其性能影响的情况下，这样的写法可以简易开发和做到代码复用，是值得考虑的。<code>select *</code>会使得优化器无法完成<strong>索引覆盖扫描</strong>这类的优化，也会给服务器带来额外的IO、内存和CPU的消耗，在不需要<code>select *</code>的时候它便会给我们造成本没有的性能影响了。</p>
-<p>​	也有这么一种容易发生的情况，就是我们多次重复执行了相同的执行并且返回相同的数据，对于这样的数据，我们可以在第一次查询该数据时将其缓存起来，这样后面再需要时直接从缓存中获取即可。</p>
-<h3 id="MySQL是否分析扫描额外的数据">MySQL是否分析扫描额外的数据</h3>
-<p>​	当我们确认我们查询返回的确实是我们需要的数据后，我们就应该看看查询为了返回结果是否扫描了过多的数据。通常简单的衡量查询开销的指标是：<code>响应时间</code>,<code>扫描行数</code>,<code>返回行数</code>，这三个指标都记录在了MySQL的<strong>慢日志</strong>中，所以<strong>检查慢日志记录是扫描行数过多的查询的好办法</strong>。</p>
-<p>​	如果我们的查询扫描了大量的数据却只返回很少的行，可以考虑如下的优化方式：</p>
-<ul>
-<li>使用<strong>索引覆盖扫描</strong>，使存储引擎不需要回表即可返回结果</li>
-<li>改变库表结构</li>
-<li>重写这个复杂查询</li>
-</ul>
-<h2 id="重构查询方式">重构查询方式</h2>
-<p>​	如果我们的查询的列确实是需要的，索引的设计和库表的设计也没什么问题的时候，那么就可以考虑下更改我们的查询方式。对于一个大查询，我们可以考虑对它进行<code>分而治之</code>的方法来进行多个小查询。对于一些关联查询，我们也考虑是不是能对它进行<strong>分解</strong>，就像书上的例子那样：</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817170821072.png" alt="image-20220817170821072"></p>
-<p>​	这样可以让缓存的效率更高，因为有缓存，我们可能可以跳过某条查询或者减少IN()里的内容。也可以减少了锁的竞争。这样的查询也可能能提升查询效率，<code>IN()</code>让MySQL按照ID顺序进行查询，顺序IO是要比随机IO高效的。这样还可以减少冗余记录的查询，在数据库上关联查询我们就可能需要重复访问同一数据，在应用层上进行关联让我们可以对某条数据只查询一次，减少了网络和内存的消耗。</p>
-<p>上面所讲的是针对查询的访问和方式，但如果知道MySQL如何优化和执行查询时，那我们在优化查询时便可以按照一些原则让优化器能按我们设想的方向运行。下面这张图是发送一个请求时MySQL所做的事情：</p>
-<p><img lazyload src="/images/loading.svg" data-src="https://typora-oss-pic.oss-cn-guangzhou.aliyuncs.com/typoraImg/image-20220817172702465.png" alt="image-20220817172702465"></p>
-<p>图中的<code>查询缓存</code>在MySQL8已经是关闭的了，《高性能MySQL》所基于的版本还是5版本的，所以如果是8版本或以上的是可以忽略掉查询缓存的。书上在<code>查询优化</code>做了很多的篇幅进行讲解，讲了很多优化器在一些查询上的优化细节和做法，这部分如果放上来记录的话篇幅还是挺长的，多到我也不知道怎么整理写上了比较好，所以第六章的查询优化处理这块还是很建议大家去阅读原书的，在这里我就先不写着了。</p>
-<h2 id="总结">总结</h2>
-<p>​	一个高性能的查询，需要好的库表设计、索引设计、查询语句设计和查询的优化方式，而查询的优化设计又是很多细节的，所以当SQL查询慢的原因是由于我们查询语句设计不妥当时，便可以照着该书籍第六章的方法去进行优化。</p>
-<p>​	通过网上资料的搜索SQL查询慢的原因也可能不在于查询语句的问题，比如网络不好的情况下，客户端和服务端之间的连接和传输受到影响、IO吞吐量小、缓存不够、出现死锁等等，硬件软件都会或多或少的影响到查询，还是要针对特定的原因去寻找对应的解决办法的。对于我个人来说，排插SQL查询慢的基本方向是通过查询<strong>慢日志</strong>来定位慢查询SQL，然后通过<strong>explain</strong>命令去分析该SQL的执行计划后进行相应的优化，如果优化完还是查询慢或者没有什么优化方向后，就再去考虑网络、内存、服务器和应用程序设计上的问题。</p>
-]]></content>
-      <categories>
-        <category>MySQL</category>
-      </categories>
-      <tags>
-        <tag>MySQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JAVA均匀生成随机数</title>
-    <url>/JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/</url>
-    <content><![CDATA[<h2 id="公式推导">公式推导</h2>
-<p>假如有一个函数rand2()会均匀生成[1,2]的随机数，现在想要实现一个rand4()的函数，第一次接触该类问题时，第一反应是如下所示：</p>
-<div class="highlight-container" data-rel="Tap"><figure class="iseeu highlight tap"><table><tr><td class="code"><pre><span class="line">rand2() + rand2() = ? ==&gt; [2,4]</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>   +  <span class="number"> 2 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>   +  <span class="number"> 2 </span>    = 4</span><br><span class="line"></span><br><span class="line">// 为了把生成随机数的范围规约成[1,n]，于是在上一步的结果后减1</span><br><span class="line">(rand2()-1) + rand2() = ? ==&gt; [1,3]</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>      +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 1 </span>    = 2</span><br><span class="line">  <span class="number"> 1 </span>      +  <span class="number"> 2 </span>    = 3</span><br></pre></td></tr></table></figure></div>
-<span id="more"></span>
-<p>会发现生成的数字不是等概率的，造成这种情况的原因也很明显，有些数字是可以通过几个组合得来，有的只能通过一种组合得来</p>
-<p>若我们把(rand2()-1)乘以2，则会得到</p>
-<div class="highlight-container" data-rel="Tap"><figure class="iseeu highlight tap"><table><tr><td class="code"><pre><span class="line">(rand2()-1) ×<span class="number"> 2 </span>+ rand2() = ?</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 1 </span>    = 1</span><br><span class="line">  <span class="number"> 0 </span>           +  <span class="number"> 2 </span>    = 2</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 1 </span>    = 3</span><br><span class="line">  <span class="number"> 2 </span>           +  <span class="number"> 2 </span>    = 4</span><br></pre></td></tr></table></figure></div>
-<p>得到的结果恰好是等概率的。我们可以通过这种方法实现rand2()-&gt;rand4()</p>
-<p>我们再举个例子：有两个均匀随机函数rand9()和rand7()，a=(rand9-1)*7，b = rand7，result = a+b</p>
-<p>则能得到下列表格的结果：</p>
-<table>
-<thead>
-<tr>
-<th>a\b</th>
-<th>1</th>
-<th>2</th>
-<th>3</th>
-<th>4</th>
-<th>5</th>
-<th>6</th>
-<th>7</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>1</td>
-<td>2</td>
-<td>3</td>
-<td>4</td>
-<td>5</td>
-<td>6</td>
-<td>7</td>
-</tr>
-<tr>
-<td>7</td>
-<td>8</td>
-<td>9</td>
-<td>10</td>
-<td>11</td>
-<td>12</td>
-<td>13</td>
-<td>14</td>
-</tr>
-<tr>
-<td>14</td>
-<td>15</td>
-<td>16</td>
-<td>17</td>
-<td>18</td>
-<td>19</td>
-<td>20</td>
-<td>21</td>
-</tr>
-<tr>
-<td>21</td>
-<td>22</td>
-<td>23</td>
-<td>24</td>
-<td>25</td>
-<td>26</td>
-<td>27</td>
-<td>28</td>
-</tr>
-<tr>
-<td>28</td>
-<td>29</td>
-<td>30</td>
-<td>31</td>
-<td>32</td>
-<td>33</td>
-<td>34</td>
-<td>35</td>
-</tr>
-<tr>
-<td>35</td>
-<td>36</td>
-<td>37</td>
-<td>38</td>
-<td>39</td>
-<td>40</td>
-<td>41</td>
-<td>42</td>
-</tr>
-<tr>
-<td>42</td>
-<td>43</td>
-<td>44</td>
-<td>45</td>
-<td>46</td>
-<td>47</td>
-<td>48</td>
-<td>49</td>
-</tr>
-<tr>
-<td>49</td>
-<td>50</td>
-<td>51</td>
-<td>52</td>
-<td>53</td>
-<td>54</td>
-<td>55</td>
-<td>56</td>
-</tr>
-<tr>
-<td>56</td>
-<td>57</td>
-<td>58</td>
-<td>59</td>
-<td>60</td>
-<td>61</td>
-<td>62</td>
-<td>63</td>
-</tr>
-</tbody>
-</table>
-<p>可以看到这样也可以均匀随机的生成[1,63]的随机数，则可以得到这样的一个规律：</p>
-<div class="highlight-container" data-rel="Reasonml"><figure class="iseeu highlight reasonml"><table><tr><td class="code"><pre><span class="line">已知 rand<span class="constructor">_N()</span> 可以等概率的生成<span class="literal">[<span class="number">1</span>, N]</span>范围的随机数</span><br><span class="line">那么：</span><br><span class="line">(rand<span class="constructor">_X()</span> - <span class="number">1</span>) × Y + rand<span class="constructor">_Y()</span> ==&gt; 可以等概率的生成<span class="literal">[<span class="number">1</span>, X <span class="operator">*</span> Y]</span>范围的随机数</span><br><span class="line">即实现了 rand_X*<span class="constructor">Y()</span></span><br></pre></td></tr></table></figure></div>
-<p>公式：<br>
-<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="72.27ex" height="2.262ex" role="img" focusable="false" viewbox="0 -750 31943.5 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(389,0)"><path data-c="1D45F" d="M21 287Q22 290 23 295T28 317T38 348T53 381T73 411T99 433T132 442Q161 442 183 430T214 408T225 388Q227 382 228 382T236 389Q284 441 347 441H350Q398 441 422 400Q430 381 430 363Q430 333 417 315T391 292T366 288Q346 288 334 299T322 328Q322 376 378 392Q356 405 342 405Q286 405 239 331Q229 315 224 298T190 165Q156 25 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 114 189T154 366Q154 405 128 405Q107 405 92 377T68 316T57 280Q55 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="mi" transform="translate(840,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mi" transform="translate(1369,0)"><path data-c="1D45B" d="M21 287Q22 293 24 303T36 341T56 388T89 425T135 442Q171 442 195 424T225 390T231 369Q231 367 232 367L243 378Q304 442 382 442Q436 442 469 415T503 336T465 179T427 52Q427 26 444 26Q450 26 453 27Q482 32 505 65T540 145Q542 153 560 153Q580 153 580 145Q580 144 576 130Q568 101 554 73T508 17T439 -10Q392 -10 371 17T350 73Q350 92 386 193T423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 180T152 343Q153 348 153 366Q153 405 129 405Q91 405 66 305Q60 285 60 284Q58 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="msub" transform="translate(1969,0)"><g data-mml-node="mi"><path data-c="1D451" d="M366 683Q367 683 438 688T511 694Q523 694 523 686Q523 679 450 384T375 83T374 68Q374 26 402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487H491Q506 153 506 145Q506 140 503 129Q490 79 473 48T445 8T417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157Q33 205 53 255T101 341Q148 398 195 420T280 442Q336 442 364 400Q369 394 369 396Q370 400 396 505T424 616Q424 629 417 632T378 637H357Q351 643 351 645T353 664Q358 683 366 683ZM352 326Q329 405 277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q233 26 290 98L298 109L352 326Z"/></g><g data-mml-node="mi" transform="translate(553,-150) scale(0.707)"><path data-c="1D44B" d="M42 0H40Q26 0 26 11Q26 15 29 27Q33 41 36 43T55 46Q141 49 190 98Q200 108 306 224T411 342Q302 620 297 625Q288 636 234 637H206Q200 643 200 645T202 664Q206 677 212 683H226Q260 681 347 681Q380 681 408 681T453 682T473 682Q490 682 490 671Q490 670 488 658Q484 643 481 640T465 637Q434 634 411 620L488 426L541 485Q646 598 646 610Q646 628 622 635Q617 635 609 637Q594 637 594 648Q594 650 596 664Q600 677 606 683H618Q619 683 643 683T697 681T738 680Q828 680 837 683H845Q852 676 852 672Q850 647 840 637H824Q790 636 763 628T722 611T698 593L687 584Q687 585 592 480L505 384Q505 383 536 304T601 142T638 56Q648 47 699 46Q734 46 734 37Q734 35 732 23Q728 7 725 4T711 1Q708 1 678 1T589 2Q528 2 496 2T461 1Q444 1 444 10Q444 11 446 25Q448 35 450 39T455 44T464 46T480 47T506 54Q523 62 523 64Q522 64 476 181L429 299Q241 95 236 84Q232 76 232 72Q232 53 261 47Q262 47 267 47T273 46Q276 46 277 46T280 45T283 42T284 35Q284 26 282 19Q279 6 276 4T261 1Q258 1 243 1T201 2T142 2Q64 2 42 0Z"/></g></g><g data-mml-node="mo" transform="translate(3174.5,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mo" transform="translate(3563.5,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(4174.7,0)"><path data-c="2212" d="M84 237T84 250T98 270H679Q694 262 694 250T679 230H98Q84 237 84 250Z"/></g><g data-mml-node="mn" transform="translate(5174.9,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g><g data-mml-node="mo" transform="translate(5674.9,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mi" transform="translate(6063.9,0)"><path data-c="D7" d="M630 29Q630 9 609 9Q604 9 587 25T493 118L389 222L284 117Q178 13 175 11Q171 9 168 9Q160 9 154 15T147 29Q147 36 161 51T255 146L359 250L255 354Q174 435 161 449T147 471Q147 480 153 485T168 490Q173 490 175 489Q178 487 284 383L389 278L493 382Q570 459 587 475T609 491Q630 491 630 471Q630 464 620 453T522 355L418 250L522 145Q606 61 618 48T630 29Z"/></g><g data-mml-node="mi" transform="translate(6841.9,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(7827.1,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mi" transform="translate(8827.3,0)"><path data-c="1D45F" d="M21 287Q22 290 23 295T28 317T38 348T53 381T73 411T99 433T132 442Q161 442 183 430T214 408T225 388Q227 382 228 382T236 389Q284 441 347 441H350Q398 441 422 400Q430 381 430 363Q430 333 417 315T391 292T366 288Q346 288 334 299T322 328Q322 376 378 392Q356 405 342 405Q286 405 239 331Q229 315 224 298T190 165Q156 25 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 114 189T154 366Q154 405 128 405Q107 405 92 377T68 316T57 280Q55 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="mi" transform="translate(9278.3,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mi" transform="translate(9807.3,0)"><path data-c="1D45B" d="M21 287Q22 293 24 303T36 341T56 388T89 425T135 442Q171 442 195 424T225 390T231 369Q231 367 232 367L243 378Q304 442 382 442Q436 442 469 415T503 336T465 179T427 52Q427 26 444 26Q450 26 453 27Q482 32 505 65T540 145Q542 153 560 153Q580 153 580 145Q580 144 576 130Q568 101 554 73T508 17T439 -10Q392 -10 371 17T350 73Q350 92 386 193T423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 180T152 343Q153 348 153 366Q153 405 129 405Q91 405 66 305Q60 285 60 284Q58 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="msub" transform="translate(10407.3,0)"><g data-mml-node="mi"><path data-c="1D451" d="M366 683Q367 683 438 688T511 694Q523 694 523 686Q523 679 450 384T375 83T374 68Q374 26 402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487H491Q506 153 506 145Q506 140 503 129Q490 79 473 48T445 8T417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157Q33 205 53 255T101 341Q148 398 195 420T280 442Q336 442 364 400Q369 394 369 396Q370 400 396 505T424 616Q424 629 417 632T378 637H357Q351 643 351 645T353 664Q358 683 366 683ZM352 326Q329 405 277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q233 26 290 98L298 109L352 326Z"/></g><g data-mml-node="mi" transform="translate(553,-150) scale(0.707)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g></g><g data-mml-node="mo" transform="translate(11549.9,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mo" transform="translate(11938.9,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(12605.6,0)"><path data-c="21D2" d="M580 514Q580 525 596 525Q601 525 604 525T609 525T613 524T615 523T617 520T619 517T622 512Q659 438 720 381T831 300T927 263Q944 258 944 250T935 239T898 228T840 204Q696 134 622 -12Q618 -21 615 -22T600 -24Q580 -24 580 -17Q580 -13 585 0Q620 69 671 123L681 133H70Q56 140 56 153Q56 168 72 173H725L735 181Q774 211 852 250Q851 251 834 259T789 283T735 319L725 327H72Q56 332 56 347Q56 360 70 367H681L671 377Q638 412 609 458T580 514Z"/></g><g data-mml-node="mi" transform="translate(13883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">可</text></g><g data-mml-node="mi" transform="translate(14883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">以</text></g><g data-mml-node="mi" transform="translate(15883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">等</text></g><g data-mml-node="mi" transform="translate(16883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">概</text></g><g data-mml-node="mi" transform="translate(17883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">率</text></g><g data-mml-node="mi" transform="translate(18883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">的</text></g><g data-mml-node="mi" transform="translate(19883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">生</text></g><g data-mml-node="mi" transform="translate(20883.4,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">成</text></g><g data-mml-node="mo" transform="translate(21883.4,0)"><path data-c="5B" d="M118 -250V750H255V710H158V-210H255V-250H118Z"/></g><g data-mml-node="mn" transform="translate(22161.4,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g><g data-mml-node="mo" transform="translate(22661.4,0)"><path data-c="2C" d="M78 35T78 60T94 103T137 121Q165 121 187 96T210 8Q210 -27 201 -60T180 -117T154 -158T130 -185T117 -194Q113 -194 104 -185T95 -172Q95 -168 106 -156T131 -126T157 -76T173 -3V9L172 8Q170 7 167 6T161 3T152 1T140 0Q113 0 96 17Z"/></g><g data-mml-node="mi" transform="translate(23106.1,0)"><path data-c="1D44B" d="M42 0H40Q26 0 26 11Q26 15 29 27Q33 41 36 43T55 46Q141 49 190 98Q200 108 306 224T411 342Q302 620 297 625Q288 636 234 637H206Q200 643 200 645T202 664Q206 677 212 683H226Q260 681 347 681Q380 681 408 681T453 682T473 682Q490 682 490 671Q490 670 488 658Q484 643 481 640T465 637Q434 634 411 620L488 426L541 485Q646 598 646 610Q646 628 622 635Q617 635 609 637Q594 637 594 648Q594 650 596 664Q600 677 606 683H618Q619 683 643 683T697 681T738 680Q828 680 837 683H845Q852 676 852 672Q850 647 840 637H824Q790 636 763 628T722 611T698 593L687 584Q687 585 592 480L505 384Q505 383 536 304T601 142T638 56Q648 47 699 46Q734 46 734 37Q734 35 732 23Q728 7 725 4T711 1Q708 1 678 1T589 2Q528 2 496 2T461 1Q444 1 444 10Q444 11 446 25Q448 35 450 39T455 44T464 46T480 47T506 54Q523 62 523 64Q522 64 476 181L429 299Q241 95 236 84Q232 76 232 72Q232 53 261 47Q262 47 267 47T273 46Q276 46 277 46T280 45T283 42T284 35Q284 26 282 19Q279 6 276 4T261 1Q258 1 243 1T201 2T142 2Q64 2 42 0Z"/></g><g data-mml-node="mo" transform="translate(24180.3,0)"><path data-c="2217" d="M229 286Q216 420 216 436Q216 454 240 464Q241 464 245 464T251 465Q263 464 273 456T283 436Q283 419 277 356T270 286L328 328Q384 369 389 372T399 375Q412 375 423 365T435 338Q435 325 425 315Q420 312 357 282T289 250L355 219L425 184Q434 175 434 161Q434 146 425 136T401 125Q393 125 383 131T328 171L270 213Q283 79 283 63Q283 53 276 44T250 35Q231 35 224 44T216 63Q216 80 222 143T229 213L171 171Q115 130 110 127Q106 124 100 124Q87 124 76 134T64 161Q64 166 64 169T67 175T72 181T81 188T94 195T113 204T138 215T170 230T210 250L74 315Q65 324 65 338Q65 353 74 363T98 374Q106 374 116 368T171 328L229 286Z"/></g><g data-mml-node="mi" transform="translate(24902.5,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(25665.5,0)"><path data-c="5D" d="M22 710V750H159V-250H22V-210H119V710H22Z"/></g><g data-mml-node="mi" transform="translate(25943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">范</text></g><g data-mml-node="mi" transform="translate(26943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">围</text></g><g data-mml-node="mi" transform="translate(27943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">的</text></g><g data-mml-node="mi" transform="translate(28943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">随</text></g><g data-mml-node="mi" transform="translate(29943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">机</text></g><g data-mml-node="mi" transform="translate(30943.5,0)"><text data-variant="normal" transform="scale(1,-1)" font-size="884px" font-family="serif">数</text></g></g></g></svg></mjx-container></p>
-<h2 id="LC题目-优化">LC题目+优化</h2>
-<h3 id="题目">题目</h3>
-<p>再来看看Leetcode上的这一题：<a class="link" href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/">470. 用 Rand7() 实现 Rand10() <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-<p>要实现rand10()，就需要先实现<code>rand_N()</code>，并且保证N大于10且是10的倍数。这样再通过<code>rand_N() % 10 + 1</code> 就可以得到[1,10]范围的随机数了。</p>
-<p>rand_N()的实现方法可以通过上面推导出来的规律得到：</p>
-<p><code>(rand7()-1) × 7 + rand7()  ==&gt; rand49()</code></p>
-<p>但是这样实现的N不是10的倍数，这该怎么处理？这里就涉及到了“<strong>拒绝采样</strong>”的知识了，也就是说，如果某个采样结果不在要求的范围内，则丢弃它。基于上面的这些分析，再回头看下面的代码，想必是不难理解了。</p>
-<div class="highlight-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>) {</span><br><span class="line">            <span class="keyword">int</span> num = (rand7() - <span class="number">1</span>) * <span class="number">7</span> + rand7(); <span class="comment">// 等概率生成[1,49]范围的随机数</span></span><br><span class="line">            <span class="keyword">if</span>(num &lt;= <span class="number">40</span>) <span class="keyword">return</span> num % <span class="number">10</span> + <span class="number">1</span>; <span class="comment">// 拒绝采样，并返回[1,10]范围的随机数</span></span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></table></figure></div>
-<h3 id="优化">优化</h3>
-<p>根据上面的分析，我们已经知道<code>(rand7() - 1) * 7 + rand7()</code> 等概率生成<code>[1,49]</code>范围的随机数。而由于我们需要的是10的倍数，因此，需要舍弃掉<code>[41, 49]</code>这9个数。优化的点就始于——我们能否利用这些范围外的数字，以减少丢弃的值，提高命中率总而提高随机数生成效率。</p>
-<p>当生成的随机数x在<code>[41,49]</code>时，我们拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,9]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,63]</code>的随机数，若这次生成的随机数在<code>[61,63]</code>时，我们也拒绝采样这一部分，而舍弃的这一部分我们可以得到<code>[1,3]</code>的均匀随机数，我们将这一随机数通过上面的处理后就可以得到<code>[1,21]</code>的随机数，若这次生成的随机数为21，则我们拒绝采样21，但是舍弃的21只能得到1这一个随机数，没有用处，所以我们只能重新生成<code>[1,49]</code>的随机数。代码如下：</p>
-<div class="highlight-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Solution</span> <span class="keyword">extends</span> <span class="title">SolBase</span> </span>{</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">rand10</span><span class="params">()</span> </span>{</span><br><span class="line">        <span class="keyword">while</span>(<span class="keyword">true</span>){</span><br><span class="line">            <span class="keyword">int</span> a = (rand7()-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            <span class="keyword">int</span> b = rand7();</span><br><span class="line">            <span class="keyword">int</span> num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">40</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">40</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">60</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">            a = (num-<span class="number">60</span>-<span class="number">1</span>)*<span class="number">7</span>;</span><br><span class="line">            b = rand7();</span><br><span class="line">            num = a+b;</span><br><span class="line">            <span class="keyword">if</span>(num&lt;=<span class="number">20</span>)<span class="keyword">return</span> num%<span class="number">10</span>+<span class="number">1</span>;</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></table></figure></div>
-<p>执行效率也比上面快了许多</p>
-<p><img lazyload src="/images/loading.svg" data-src="JAVA%E5%9D%87%E5%8C%80%E7%94%9F%E6%88%90%E9%9A%8F%E6%9C%BA%E6%95%B0/image-20210905123421344.png" alt="image-20210905123421344"></p>
-<p>保留的数字范围可以通过下面这个公式得到：</p>
-<p>假设有<code>rand_X</code>，想得到<code>rand_Y</code>，<br>
-<code>a = (rand_X()-1)*Y</code>，<code>b = rand_X()</code>;<br>
-则保留范围为：<br>
-<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="21.923ex" height="2.262ex" role="img" focusable="false" viewbox="0 -750 9689.9 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><path data-c="5B" d="M118 -250V750H255V710H158V-210H255V-250H118Z"/></g><g data-mml-node="mn" transform="translate(278,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g><g data-mml-node="mo" transform="translate(778,0)"><path data-c="2C" d="M78 35T78 60T94 103T137 121Q165 121 187 96T210 8Q210 -27 201 -60T180 -117T154 -158T130 -185T117 -194Q113 -194 104 -185T95 -172Q95 -168 106 -156T131 -126T157 -76T173 -3V9L172 8Q170 7 167 6T161 3T152 1T140 0Q113 0 96 17Z"/></g><g data-mml-node="mi" transform="translate(1222.7,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(2207.9,0)"><path data-c="2217" d="M229 286Q216 420 216 436Q216 454 240 464Q241 464 245 464T251 465Q263 464 273 456T283 436Q283 419 277 356T270 286L328 328Q384 369 389 372T399 375Q412 375 423 365T435 338Q435 325 425 315Q420 312 357 282T289 250L355 219L425 184Q434 175 434 161Q434 146 425 136T401 125Q393 125 383 131T328 171L270 213Q283 79 283 63Q283 53 276 44T250 35Q231 35 224 44T216 63Q216 80 222 143T229 213L171 171Q115 130 110 127Q106 124 100 124Q87 124 76 134T64 161Q64 166 64 169T67 175T72 181T81 188T94 195T113 204T138 215T170 230T210 250L74 315Q65 324 65 338Q65 353 74 363T98 374Q106 374 116 368T171 328L229 286Z"/></g><g data-mml-node="mo" transform="translate(2930.1,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mo" transform="translate(3319.1,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(3708.1,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mo" transform="translate(4459.3,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mi" transform="translate(5459.6,0)"><path data-c="1D44F" d="M73 647Q73 657 77 670T89 683Q90 683 161 688T234 694Q246 694 246 685T212 542Q204 508 195 472T180 418L176 399Q176 396 182 402Q231 442 283 442Q345 442 383 396T422 280Q422 169 343 79T173 -11Q123 -11 82 27T40 150V159Q40 180 48 217T97 414Q147 611 147 623T109 637Q104 637 101 637H96Q86 637 83 637T76 640T73 647ZM336 325V331Q336 405 275 405Q258 405 240 397T207 376T181 352T163 330L157 322L136 236Q114 150 114 114Q114 66 138 42Q154 26 178 26Q211 26 245 58Q270 81 285 114T318 219Q336 291 336 325Z"/></g><g data-mml-node="msub" transform="translate(5888.6,0)"><g data-mml-node="mo"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="TeXAtom" transform="translate(422,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mi"><path data-c="1D45A" d="M21 287Q22 293 24 303T36 341T56 388T88 425T132 442T175 435T205 417T221 395T229 376L231 369Q231 367 232 367L243 378Q303 442 384 442Q401 442 415 440T441 433T460 423T475 411T485 398T493 385T497 373T500 364T502 357L510 367Q573 442 659 442Q713 442 746 415T780 336Q780 285 742 178T704 50Q705 36 709 31T724 26Q752 26 776 56T815 138Q818 149 821 151T837 153Q857 153 857 145Q857 144 853 130Q845 101 831 73T785 17T716 -10Q669 -10 648 17T627 73Q627 92 663 193T700 345Q700 404 656 404H651Q565 404 506 303L499 291L466 157Q433 26 428 16Q415 -11 385 -11Q372 -11 364 -4T353 8T350 18Q350 29 384 161L420 307Q423 322 423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 181Q151 335 151 342Q154 357 154 369Q154 405 129 405Q107 405 92 377T69 316T57 280Q55 278 41 278H27Q21 284 21 287Z"/></g><g data-mml-node="mi" transform="translate(878,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mi" transform="translate(1407,0)"><path data-c="1D465" d="M52 289Q59 331 106 386T222 442Q257 442 286 424T329 379Q371 442 430 442Q467 442 494 420T522 361Q522 332 508 314T481 292T458 288Q439 288 427 299T415 328Q415 374 465 391Q454 404 425 404Q412 404 406 402Q368 386 350 336Q290 115 290 78Q290 50 306 38T341 26Q378 26 414 59T463 140Q466 150 469 151T485 153H489Q504 153 504 145Q504 144 502 134Q486 77 440 33T333 -11Q263 -11 227 52Q186 -10 133 -10H127Q78 -10 57 16T35 71Q35 103 54 123T99 143Q142 143 142 101Q142 81 130 66T107 46T94 41L91 40Q91 39 97 36T113 29T132 26Q168 26 194 71Q203 87 217 139T245 247T261 313Q266 340 266 352Q266 380 251 392T217 404Q177 404 142 372T93 290Q91 281 88 280T72 278H58Q52 284 52 289Z"/></g></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7759.9,0)"><g data-mml-node="mo"><path data-c="2F" d="M423 750Q432 750 438 744T444 730Q444 725 271 248T92 -240Q85 -250 75 -250Q68 -250 62 -245T56 -231Q56 -221 230 257T407 740Q411 750 423 750Z"/></g></g><g data-mml-node="mi" transform="translate(8259.9,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(9022.9,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(9411.9,0)"><path data-c="5D" d="M22 710V750H159V-250H22V-210H119V710H22Z"/></g></g></g></svg></mjx-container><br>
-返回的数字为：<br>
-<mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="21.743ex" height="2.262ex" role="img" focusable="false" viewbox="0 -750 9610.6 1000"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(389,0)"><path data-c="1D44E" d="M33 157Q33 258 109 349T280 441Q331 441 370 392Q386 422 416 422Q429 422 439 414T449 394Q449 381 412 234T374 68Q374 43 381 35T402 26Q411 27 422 35Q443 55 463 131Q469 151 473 152Q475 153 483 153H487Q506 153 506 144Q506 138 501 117T481 63T449 13Q436 0 417 -8Q409 -10 393 -10Q359 -10 336 5T306 36L300 51Q299 52 296 50Q294 48 292 46Q233 -10 172 -10Q117 -10 75 30T33 157ZM351 328Q351 334 346 350T323 385T277 405Q242 405 210 374T160 293Q131 214 119 129Q119 126 119 118T118 106Q118 61 136 44T179 26Q217 26 254 59T298 110Q300 114 325 217T351 328Z"/></g><g data-mml-node="mo" transform="translate(1140.2,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mi" transform="translate(2140.4,0)"><path data-c="1D44F" d="M73 647Q73 657 77 670T89 683Q90 683 161 688T234 694Q246 694 246 685T212 542Q204 508 195 472T180 418L176 399Q176 396 182 402Q231 442 283 442Q345 442 383 396T422 280Q422 169 343 79T173 -11Q123 -11 82 27T40 150V159Q40 180 48 217T97 414Q147 611 147 623T109 637Q104 637 101 637H96Q86 637 83 637T76 640T73 647ZM336 325V331Q336 405 275 405Q258 405 240 397T207 376T181 352T163 330L157 322L136 236Q114 150 114 114Q114 66 138 42Q154 26 178 26Q211 26 245 58Q270 81 285 114T318 219Q336 291 336 325Z"/></g><g data-mml-node="mo" transform="translate(2569.4,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mspace" transform="translate(2958.4,0)"/><g data-mml-node="mo" transform="translate(3958.4,0)"><path data-c="28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"/></g><g data-mml-node="mi" transform="translate(4347.4,0)"><path data-c="6D" d="M41 46H55Q94 46 102 60V68Q102 77 102 91T102 122T103 161T103 203Q103 234 103 269T102 328V351Q99 370 88 376T43 385H25V408Q25 431 27 431L37 432Q47 433 65 434T102 436Q119 437 138 438T167 441T178 442H181V402Q181 364 182 364T187 369T199 384T218 402T247 421T285 437Q305 442 336 442Q351 442 364 440T387 434T406 426T421 417T432 406T441 395T448 384T452 374T455 366L457 361L460 365Q463 369 466 373T475 384T488 397T503 410T523 422T546 432T572 439T603 442Q729 442 740 329Q741 322 741 190V104Q741 66 743 59T754 49Q775 46 803 46H819V0H811L788 1Q764 2 737 2T699 3Q596 3 587 0H579V46H595Q656 46 656 62Q657 64 657 200Q656 335 655 343Q649 371 635 385T611 402T585 404Q540 404 506 370Q479 343 472 315T464 232V168V108Q464 78 465 68T468 55T477 49Q498 46 526 46H542V0H534L510 1Q487 2 460 2T422 3Q319 3 310 0H302V46H318Q379 46 379 62Q380 64 380 200Q379 335 378 343Q372 371 358 385T334 402T308 404Q263 404 229 370Q202 343 195 315T187 232V168V108Q187 78 188 68T191 55T200 49Q221 46 249 46H265V0H257L234 1Q210 2 183 2T145 3Q42 3 33 0H25V46H41Z"/><path data-c="6F" d="M28 214Q28 309 93 378T250 448Q340 448 405 380T471 215Q471 120 407 55T250 -10Q153 -10 91 57T28 214ZM250 30Q372 30 372 193V225V250Q372 272 371 288T364 326T348 362T317 390T268 410Q263 411 252 411Q222 411 195 399Q152 377 139 338T126 246V226Q126 130 145 91Q177 30 250 30Z" transform="translate(833,0)"/><path data-c="64" d="M376 495Q376 511 376 535T377 568Q377 613 367 624T316 637H298V660Q298 683 300 683L310 684Q320 685 339 686T376 688Q393 689 413 690T443 693T454 694H457V390Q457 84 458 81Q461 61 472 55T517 46H535V0Q533 0 459 -5T380 -11H373V44L365 37Q307 -11 235 -11Q158 -11 96 50T34 215Q34 315 97 378T244 442Q319 442 376 393V495ZM373 342Q328 405 260 405Q211 405 173 369Q146 341 139 305T131 211Q131 155 138 120T173 59Q203 26 251 26Q322 26 373 103V342Z" transform="translate(1333,0)"/></g><g data-mml-node="mspace" transform="translate(6236.4,0)"/><g data-mml-node="mi" transform="translate(6736.1,0)"><path data-c="1D44C" d="M66 637Q54 637 49 637T39 638T32 641T30 647T33 664T42 682Q44 683 56 683Q104 680 165 680Q288 680 306 683H316Q322 677 322 674T320 656Q316 643 310 637H298Q242 637 242 624Q242 619 292 477T343 333L346 336Q350 340 358 349T379 373T411 410T454 461Q546 568 561 587T577 618Q577 634 545 637Q528 637 528 647Q528 649 530 661Q533 676 535 679T549 683Q551 683 578 682T657 680Q684 680 713 681T746 682Q763 682 763 673Q763 669 760 657T755 643Q753 637 734 637Q662 632 617 587Q608 578 477 424L348 273L322 169Q295 62 295 57Q295 46 363 46Q379 46 384 45T390 35Q390 33 388 23Q384 6 382 4T366 1Q361 1 324 1T232 2Q170 2 138 2T102 1Q84 1 84 9Q84 14 87 24Q88 27 89 30T90 35T91 39T93 42T96 44T101 45T107 45T116 46T129 46Q168 47 180 50T198 63Q201 68 227 171L252 274L129 623Q128 624 127 625T125 627T122 629T118 631T113 633T105 634T96 635T83 636T66 637Z"/></g><g data-mml-node="mo" transform="translate(7499.1,0)"><path data-c="29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"/></g><g data-mml-node="mo" transform="translate(8110.3,0)"><path data-c="2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"/></g><g data-mml-node="mn" transform="translate(9110.6,0)"><path data-c="31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"/></g></g></g></svg></mjx-container><br>
-参考题解链接：<a class="link" href="https://leetcode-cn.com/problems/implement-rand10-using-rand7/solution/cong-zui-ji-chu-de-jiang-qi-ru-he-zuo-dao-jun-yun-/">从最基础的讲起如何做到均匀的生成随机数 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-]]></content>
-      <categories>
-        <category>JAVA</category>
-      </categories>
-      <tags>
-        <tag>JAVA</tag>
-        <tag>算法</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>代码块Mac风格</title>
-    <url>/%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/</url>
-    <content><![CDATA[<p>看到网上别人博客的代码块都是Mac风格＋黑底，于是乎我也整一波，但是发现按照网上的来修改highlight_theme还是不得行，主要是网上的大部分是旧版的，跟现版本的配置文件有点出入，于是在看了一堆博客和分析报错原因后，我找到了实现的办法。</p>
-<p><img lazyload src="/images/loading.svg" data-src="%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508161438627.png" alt="image-20210508161438627"></p>
-<span id="more"></span>
-<p>通过 <a class="link" href="https://miaosakurai.com/">樱井喵 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> 的这一篇 <a class="link" href="https://miaosakurai.com/2020/04/20/Hexo-NexT%E7%BE%8E%E5%8C%96%F0%9F%8D%95Mac-Panel%E9%A3%8E%E6%A0%BC%E4%BB%A3%E7%A0%81%E5%9D%97%E9%85%8D%E7%BD%AE/">博客 <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> ，直接在 <code>主题配置文件</code>配置一下 <code>codeblock.copy_button.style: mac</code>就行了</p>
-<div class="highlight-container" data-rel="Yaml"><figure class="iseeu highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">copy_button:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">show_result:</span> <span class="literal">true</span></span><br><span class="line">    <span class="comment"># Available values: default | flat | mac</span></span><br><span class="line">    <span class="attr">style:</span> <span class="string">mac</span></span><br></pre></td></tr></table></figure></div>
-<p>要实现上面代码块的样式，我们可以在<code>站点目录\node_modules\highlight.js\styles</code>里发现有许多中css样式(tomorrow-theme也在其中)</p>
-<p><img lazyload src="/images/loading.svg" data-src="%E4%BB%A3%E7%A0%81%E5%9D%97Mac%E9%A3%8E%E6%A0%BC/image-20210508160824026.png" alt="image-20210508160824026"></p>
-<p>我们找到<code>主题配置文件</code>中的theme，把light和dark都改成上述文件夹里的某种样式就行了，我用的是tomorrow-night-bright，也就是本文代码块的样式。</p>
-<div class="highlight-container" data-rel="Yaml"><figure class="iseeu highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">theme:</span></span><br><span class="line">    <span class="attr">light:</span> <span class="string">tomorrow-night-bright</span></span><br><span class="line">    <span class="attr">dark:</span> <span class="string">tomorrow-night-bright</span></span><br></pre></td></tr></table></figure></div>
-<p>不过这种会对小代码块也同样生效，暂时我还没找到方法，等待后面找到了我再进行一波更新。</p>
-<p>在报错中我也找到了一个highlight.js的地址：<code>站点目录\themes\next\scripts\events\lib\highlight.js</code></p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-        <tag>代码块</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>创建分支存储源文件</title>
-    <url>/%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/</url>
-    <content><![CDATA[<p>为了防止日后出现换电脑的情况而导致自己的配置文件和一些文档消失，所以创建一个分支存放源文件是有必要的，当然你也可以选择存放到云盘，只要你记得更新就是了。创建分支存放的方法其实也不是很复杂。</p>
-<span id="more"></span>
-<h2 id="初始化版本库并与远程仓库关联">初始化版本库并与远程仓库关联</h2>
-<p>一般按照网上方法所创建的博客是没有与远程仓库建立关联的，通过几个git命令来进行关联。</p>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">//将你的本地文件夹初始化成一个版本库</span><br><span class="line">git init</span><br><span class="line"></span><br><span class="line">//用 git remote add origin 你的github仓库地址 命令来建立与远程仓库的关联，这里的 origin 是你定义的远程仓库在本地的名字，你也可以叫别的，一般命名成 origin</span><br><span class="line">git remote add origin <span class="string">&quot;你的仓库地址&quot;</span></span><br></pre></td></tr></table></figure></div>
-<h2 id="创建并切换分支，提交文件">创建并切换分支，提交文件</h2>
-<p>创建并切换分支：</p>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">git checkout -b <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
-<p>提交文件：</p>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">git add .</span><br><span class="line"></span><br><span class="line">git commit -m<span class="string">&quot;源文件&quot;</span></span><br><span class="line"></span><br><span class="line">git push origin <span class="string">&quot;新分支名&quot;</span></span><br></pre></td></tr></table></figure></div>
-<h2 id="在GitHub中更改新分支为默认分支">在GitHub中更改新分支为默认分支</h2>
-<p>把新建的分支设置成 默认分支，这样做的原因可以让你以后在别的机器上pull的时候能够直接拉取源文件，不用再指定分支。</p>
-<p>在GitHub中进入settings中的branches，点击双向箭头进行切换。</p>
-<p><img lazyload src="/images/loading.svg" data-src="%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508010923455.png" alt="image-20210508010923455"></p>
-<p>选中新创分支并点击Update</p>
-<p><img lazyload src="/images/loading.svg" data-src="%E5%88%9B%E5%BB%BA%E5%88%86%E6%94%AF%E5%AD%98%E5%82%A8%E6%BA%90%E6%96%87%E4%BB%B6/image-20210508011012859.png" alt="image-20210508011012859"></p>
-<p>它会弹出一个红色的经过，直接sure就行了。</p>
-<h2 id="后续日常管理操作">后续日常管理操作</h2>
-<p>只要你的<code>站点配置文件</code>里deploy的branch是master，在你执行<code>hexo g -d</code>后也同样会更新。在你进行了文章添加修改或修改样式等改动后，通过下面流程进行管理：</p>
-<ol>
-<li>依次执行<code>git add .</code> 、<code>git commit -m&quot;xxx&quot;</code>、<code>git push origin 新创分支名</code>推送到GitHub(注意此时当前分支是你新创的分支)。</li>
-<li>执行<code>hexo g -d</code>发布网站到master分支上</li>
-</ol>
-<p>建议不要调转这两者的顺序</p>
-<h2 id="在其他电脑修改博客">在其他电脑修改博客</h2>
-<p>通过git clone将仓库拉下来(默认分支为你当时新创的分支)</p>
-<p>然后在你copy下来的仓库文件夹通过git bash执行一下指令：<code>npm install hexo</code>、<code>npm install</code>、<code>npm install hexo-deployer-git</code>（不需要<code>hexo init</code>）。</p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在文章中添加更新时间</title>
-    <url>/makeUpdTime/</url>
-    <content><![CDATA[<p>鉴于网上的文章许多都是通过修改<code>/themes/next/layout/_macro/post.swig</code>，并在<code>&lt;span class=&quot;post-time&quot;&gt;...&lt;/span&gt;</code>标签后添加一段代码，但是现在的版本找不到swig文件。所以写下这篇文章记录下该方法。</p>
-<span id="more"></span>
-<h2 id="初始方法-不需要">初始方法(不需要)</h2>
-<p><s>经过几番查找和试验，可以<code>themes\next\layout\_partials\post\post-meta.njk</code>进行修改，并在如图所示的地方加入该代码：</s></p>
-<p><img lazyload src="/images/loading.svg" data-src="makeUpdTime/image-20210508000023413.png" alt="添加位置"></p>
-<p><s>代码如下：</s></p>
-<div class="highlight-container" data-rel="Html"><figure class="iseeu highlight html"><table><tr><td class="code"><pre><span class="line">&#123;%if post.updated and post.updated &gt; post.date%&#125;</span><br><span class="line">  <span class="tag">&lt;<span class="name">span</span> <span class="attr">class</span>=<span class="string">&quot;post-updated&quot;</span>&gt;</span></span><br><span class="line">    <span class="symbol">&amp;nbsp;</span> | <span class="symbol">&amp;nbsp;</span> &#123;&#123; __(&#x27;post.updated&#x27;) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;<span class="name">time</span> <span class="attr">itemprop</span>=<span class="string">&quot;dateUpdated&quot;</span> <span class="attr">datetime</span>=<span class="string">&quot;&#123;&#123; moment(post.updated).format() &#125;&#125;&quot;</span> <span class="attr">content</span>=<span class="string">&quot;&#123;&#123; date(post.updated, config.date_format) &#125;&#125;&quot;</span>&gt;</span></span><br><span class="line">      &#123;&#123; date(post.updated, config.date_format) &#125;&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">time</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">&#123;% endif %&#125;</span><br></pre></td></tr></table></figure></div>
-<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
-<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码</p>
-<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-<p>这样更新时间就能显示出来了。</p>
-<p><img lazyload src="/images/loading.svg" data-src="makeUpdTime/image-20210508001321657.png" alt="image-20210508001321657"></p>
-<hr>
-<h2 id="现方法">现方法</h2>
-<p>后面的测试莫名其妙地发现不用加上面那一大段代码。</p>
-<p>在<code>主题配置文件</code>(/themes/next/_config.yml)中加入如下一行代码和修改post_meta的update_at</p>
-<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="comment">#可以加在最后一行</span></span><br><span class="line"><span class="attr">display_updated:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#修改update_at</span></span><br><span class="line"><span class="attr">post_meta:</span></span><br><span class="line"> <span class="attr">updated_at:</span></span><br><span class="line">     <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">     <span class="attr">another_day:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-<p>在你所对应的<code>language</code>配置文件(我的是zh-CN，目录为themes/next/languages/zh-CN.yml)添加或修改如下字段</p>
-<div class="highlight-container" data-rel="Yml"><figure class="iseeu highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post:</span></span><br><span class="line">  <span class="attr">updated:</span> <span class="string">更新于</span></span><br></pre></td></tr></table></figure></div>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在文章中添加图片</title>
-    <url>/TestPage/</url>
-    <content><![CDATA[<p>这是通过 <code>hexo new TestPage</code> 命令所创建的一篇文章，存放在source目录下的_posts.</p>
-<p>贴张图片测试一下能不能成功显示出来：👇</p>
-<p><img lazyload src="/images/loading.svg" data-src="TestPage/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20201108102123.jpg" alt="测试图片"></p>
-<span id="more"></span>
-<p>若图片显示不出来，则在<code>站点根目录</code>下安装插件</p>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">npm install https://github.com/CodeFalling/hexo-asset-image --save</span><br></pre></td></tr></table></figure></div>
-<p>修改<code>站点配置文件</code></p>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">post_asset_folder: <span class="literal">true</span></span><br><span class="line">marked:</span><br><span class="line">  prependRoot: <span class="literal">true</span></span><br><span class="line">  postAsset: <span class="literal">true</span></span><br></pre></td></tr></table></figure></div>
-<p>这样在创建文章时，会同样生成一个同名文件夹</p>
-<p><img lazyload src="/images/loading.svg" data-src="TestPage/image-20210507150008908.png" alt="实例"></p>
-<p>由于hexo生成的是.md文件，所以下载Typora进行文本编辑是一个很好的选择。从typora左上角的文件-&gt;偏好设置-&gt;图像里，在<code>插入图片时</code>那里改成复制到指定路径，并勾选上前三项</p>
-<p><img lazyload src="/images/loading.svg" data-src="TestPage/image-20210507150259312.png" alt="image-20210507150259312"></p>
-<p><s>当把图片复制到xxx文章后，图片会自动变为  ![](xxx/图片名.图片类型)，最后把xxx/去掉即可。</s></p>
-<p>(第一次测试时去掉xxx/是可行的，后面又不行，因此重新加回xxx/)</p>
-]]></content>
-      <categories>
-        <category>hexo配置</category>
-      </categories>
-      <tags>
-        <tag>test</tag>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Hello World</title>
-    <url>/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a class="link" href="https://hexo.io/">Hexo <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a>! This is your very first post. Check <a class="link" href="https://hexo.io/docs/">documentation <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> for more info. If you get any problems when using Hexo, you can find the answer in <a class="link" href="https://hexo.io/docs/troubleshooting.html">troubleshooting <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a> or you can ask me on <a class="link" href="https://github.com/hexojs/hexo/issues">GitHub <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a>.</p>
-<span id="more"></span>
-<h2 id="Quick-Start">Quick Start</h2>
-<h3 id="Create-a-new-post">Create a new post</h3>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure></div>
-<p>More info: <a class="link" href="https://hexo.io/docs/writing.html">Writing <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-<h3 id="Run-server">Run server</h3>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure></div>
-<p>More info: <a class="link" href="https://hexo.io/docs/server.html">Server <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-<h3 id="Generate-static-files">Generate static files</h3>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure></div>
-<p>More info: <a class="link" href="https://hexo.io/docs/generating.html">Generating <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-<h3 id="Deploy-to-remote-sites">Deploy to remote sites</h3>
-<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure></div>
-<p>More info: <a class="link" href="https://hexo.io/docs/one-command-deployment.html">Deployment <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
-]]></content>
   </entry>
 </search>
